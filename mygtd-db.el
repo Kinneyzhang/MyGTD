@@ -88,8 +88,4 @@ SQL can be either the emacsql vector representation, or a string."
 (defun mygtd-add-task ()
   (interactive))
 
-(defun mygtd-add-proj ()
-  (interactive))
-
-(defun mygtd-add-area ()
-  (interactive))
+(defun mygtd-add-proj ())
