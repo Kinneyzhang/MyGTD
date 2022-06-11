@@ -15,16 +15,19 @@
       (timestamp :not-null)
       (parent-id) ;; parent may be a todo entry
       (stick) ;; whether to stick on top
-      (reminder)]) ;; a special note
+      (reminder)]) ;; a special note, 有待办的属性，但又不是强任务
     (entry
      [(id :primary-key)
       (name :not-null)
-      (type :not-null) ;; task, proj, area
+      (type :not-null) ;; task, proj, area, 
       (status :not-null) ;; todo, done, nil
+      (date)
+      (period) ;; morning, afternoon, evening
+      (effort)
       (order :not-null)
       (level :not-null)
-      (parent-id)
-      (clocking)])))
+      (clocking)
+      (parent-id)])))
 
 (defun mygtd-db--get-conn ()
   "Return the mygtd database connection with key PATH."
@@ -89,3 +92,6 @@ SQL can be either the emacsql vector representation, or a string."
   (interactive))
 
 (defun mygtd-add-proj ())
+
+
+(provide 'mygtd-db)
