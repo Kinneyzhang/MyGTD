@@ -22,8 +22,12 @@ Each data is a plist.")
 
 (defun mygtd-get-projects ()
   "Return all active projects."
-  (mygtd-db-query [:select [id name] :from entry
-                           :where (= type "proj")]))
+  (mygtd-db-query [:select [id name level] :from entry
+                           :where (and (= type "proj")
+                                       ())]))
+
+(defun mygtd-get-level ()
+  )
 
 (defun mygtd-daily-add-task ()
   "Remove a task to do today."
