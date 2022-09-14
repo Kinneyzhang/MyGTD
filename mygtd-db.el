@@ -9,25 +9,23 @@
   "Database connection to mygtd-db.")
 
 (defconst mygtd-db--table-schemata
-  '((note
+  '((task
      [(id :primary-key)
-      (content :not-null)
-      (timestamp :not-null)
-      (parent-id) ;; parent may be a todo entry
-      (stick) ;; whether to stick on top
-      (reminder)]) ;; a special note, 有待办的属性，但又不是强任务
-    (entry
-     [(id :primary-key)
+      (parent :not-null)
       (name :not-null)
-      (type :not-null) ;; task, proj, area, 
-      (status :not-null) ;; todo, done, nil
-      (date)
-      (period) ;; morning, afternoon, evening
-      (effort)
-      (order :not-null)
-      (level :not-null)
-      (clocking)
-      (parent-id)])))
+      (category :not-null)
+      (status :not-null)
+      (timestamp)
+      (period)
+      (deadline)
+      (location)
+      (device)])
+    (proj
+     [(id :primary-key)
+      (parent :not-null)
+      (name :not-null)
+      (status :not-null)
+      (deadline)])))
 
 (defun mygtd-db--get-conn ()
   "Return the mygtd database connection with key PATH."
@@ -80,18 +78,7 @@ SQL can be either the emacsql vector representation, or a string."
   (mygtd-db--close)
   (delete-file mygtd-db-file))
 
-(defun mygtd-add-entry ()
-  (interactive)
-  )
-
-(defun mygtd-add-note ()
-  (interactive)
-  )
-
-(defun mygtd-add-task ()
-  (interactive))
-
-(defun mygtd-add-proj ())
-
-
 (provide 'mygtd-db)
+
+
+(mygtd-db-query )
