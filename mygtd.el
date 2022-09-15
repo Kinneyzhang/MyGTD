@@ -78,6 +78,10 @@ according to FROM-TIME and TO-TIME."
                                  ,.:timestr ,.:period ,.:deadline
                                  ,.:location ,.:device ,.:parent])]))))
 
+(defun mygtd-add-multi-tasks (list)
+  (dolist (plist list)
+    (mygtd-add-task plist)))
+
 (defvar mygtd-daily-mode-map nil)
 (defun mygtd-buffer-setup ()
   (let ((inhibit-read-only t))
@@ -90,14 +94,41 @@ according to FROM-TIME and TO-TIME."
 
 (defun mygtd-daily-task (date)
   (mygtd-db-query
-   `[:select * :from task :where (in )]))
+   `[:select * :from task :where (like timestr ,(concat "%" date "%"))]))
+(mygtd-daily-task "20220915")
+
+(defun mygtd-monthly-task (month)
+  (mygtd-db-query
+   `[:select * :from task :where (or (like timestr ,(concat "%" month ",%"))
+                                     (like timestr ,(concat "%" month)))]))
+
+(mygtd-monthly-task "202209")
+
+(defun mygtd-yearly-task (year)
+  (mygtd-db-query
+   `[:select * :from task :where (or (like timestr ,(concat "%" year ",%"))
+                                     (like timestr ,(concat "%" year ",%")))]))
+
+(mygtd-add-multi-tasks
+ '((:name "test1" :category "work" :timestr "20220914,20220915")
+   (:name "test2" :category "study" :timestr "20220915,20220916")
+   (:name "test3" :category "work" :timestr "20220914")
+   (:name "test4" :category "work" :timestr "202209,20220915")
+   (:name "test5" :category "work" :timestr "20220916")
+   (:name "test6" :category "study" :timestr "20220915,202209")
+   (:name "test7" :category "work" :timestr "20220915")
+   (:name "test8" :category "work" :timestr "20220915,202209,202210")
+   (:name "test9" :category "work" :timestr "2022")
+   (:name "test10" :category "work" :timestr "2022,2023")
+   (:name "test11" :category "work" :timestr "202209,2022")
+   (:name "test12" :category "work" :timestr "202209,2022,202210")))
 
 (defun mygtd-daily-view-show ()
   "Show the view of mygtd-daily buffer."
   (interactive)
   (if-let ((buf (get-buffer mygtd-daily-buffer)))
       (switch-to-buffer buf)
-    (switch-to-buffer (get-buffer-create mygtd-daily-buf))
+    (switch-to-buffer (get-buffer-create mygtd-daily-buffer))
     (mygtd-buffer-setup)
 
     (let ((ewoc (ewoc-create 'mygtd-daily-pp
@@ -117,7 +148,6 @@ according to FROM-TIME and TO-TIME."
       (progn
         (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
         (hl-line-mode 1))
-    (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))q
-
+    (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))
 
 (provide 'mygtd)
