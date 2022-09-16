@@ -1,3 +1,4 @@
+(require 'org-id)
 (require 'mygtd-macs)
 (require 'mygtd-db)
 
