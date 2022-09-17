@@ -14,3 +14,46 @@
 ;;    (:name "如何玩，如何会玩，如何才能使身心得到真正的方式和休息" :category "work" :timestr "2022,2023,")
 ;;    (:name "阅读总结《费曼学习法》第五六章" :category "work" :timestr "202209,2022,")
 ;;    (:name "研究 hammerspoon 的功能" :category "work" :timestr "202209,2022,202210,")))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar example-editors '("emacs" "vim" "vscode" "sublime text"))
+(defvar example-websites
+  '(("emacs" "https://www.gnu.org/software/emacs/")
+    ("vim" "https://www.vim.org")
+    ("vscode" "https://code.visualstudio.com")
+    ("sublime text" "https://www.sublimetext.com")))
+
+(with-twidget-buffer "*Twidget Test*"
+  (twidget-create 'twidget-choice
+    :bind 'example-editor
+    :choices example-editors
+    :format "\nEditors: [t]"
+    :value "emacs"
+    :separator "/"
+    :action (lambda (value)
+              (twidget-multi-update
+               'example-string `(:value ,(capitalize value))
+               'example-link `(:value ,(assoc value example-websites))))
+    :require t)
+  (twidget-create 'twidget-button
+    :value "#switch#"
+    :action (lambda (btn)
+              (let* ((choices example-editors)
+                     (editor (downcase example-editor))
+                     (nth (seq-position choices editor)))
+                (twidget-update
+                 'example-editor
+                 :value (nth (% (1+ nth) (length choices)) choices)))))
+  (twidget-insert "\n\n")
+  (twidget-create 'twidget-text
+    :bind 'example-string
+    :format "  - [t] is my favorite editor."
+    :value "Emacs"
+    :plain t)
+  (twidget-create 'twidget-text
+    :bind 'example-link
+    :format "\n  - The website of [t0] is [t1]."
+    :value '("emacs" "https://www.gnu.org/software/emacs/")
+    :plain t))

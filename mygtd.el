@@ -37,9 +37,9 @@
 
 (defvar mygtd-task-default-status "todo")
 
-(defvar mygtd-task-icon-todo "▢")
+(defvar mygtd-task-icon-todo "☐") ;; ▢
 
-(defvar mygtd-task-icon-done "√")
+(defvar mygtd-task-icon-done "☑") ;; √
 
 (defvar mygtd-task-icon-migrate ">")
 
@@ -104,6 +104,12 @@ according to FROM-TIME and TO-TIME."
 
 (defvar mygtd-daily-buffer "*Mygtd Daily*")
 
+;; (defface mygtd-icon-done-face
+;;   '((t warning)))
+
+;; (defvar mygtd-icon-todo-face
+;;   '((t warning)))
+
 (defun mygtd-daily-pp (data)
   ;; timestr should contains mygtd-daily-date
   (if data
@@ -118,12 +124,12 @@ according to FROM-TIME and TO-TIME."
              (length (length timelst)))
         (if (= curr-nth (1- length))
             ;; current date is the last one
-            (insert (format "%s %s" (mygtd-task-icon status) name))
+            (insert (format "• %s %s" (mygtd-task-icon status) name))
           ;; current date is not the last one.
           ;; compare curr-time and next-time
           (let* ((next-time (nth (1+ curr-nth) timelst))
                  (icon (mygtd-migrated-icon curr-time next-time)))
-            (insert (format "%s %s" icon name)))))
+            (insert (format "• %s %s" icon name)))))
     (insert "No daily tasks.")))
 
 (defvar mygtd-daily-mode-map nil)
@@ -174,14 +180,14 @@ according to FROM-TIME and TO-TIME."
   "Switch to the view of next date"
   (interactive)
   (mygtd-daily-show
-   (format-time-string "%Y%m%d" (+ (mygtd-date-to-timestamp mygtd-daily-date)
+   (format-time-string "%Y%m%d" (+ (mygtd-date-to-second mygtd-daily-date)
                                    (* 24 60 60)))))
 
 (defun mygtd-daily-show-previous ()
   "Switch to the view of previous date"
   (interactive)
   (mygtd-daily-show
-   (format-time-string "%Y%m%d" (- (mygtd-date-to-timestamp mygtd-daily-date)
+   (format-time-string "%Y%m%d" (- (mygtd-date-to-second mygtd-daily-date)
                                    (* 24 60 60)))))
 
 (defun mygtd-daily-refresh ()
@@ -213,3 +219,4 @@ according to FROM-TIME and TO-TIME."
     (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))
 
 (provide 'mygtd)
+
