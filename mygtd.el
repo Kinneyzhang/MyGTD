@@ -45,31 +45,6 @@
 
 (defvar mygtd-task-icon-someday "<")
 
-(defun mygtd-task-interval-query (time)
-  "Return a interval of all tasks.
-The interval could be daily, monthly or yearly."
-  (mygtd-query-result-plist
-   'task (mygtd-db-query
-          `[:select * :from task :where (like timestr ,(concat "%" time ",%"))])))
-
-(defun mygtd-task-add (plist)
-  "Add a task to database according to a PLIST."
-  (let-alist (plist->alist plist)
-    (let ((.:id (or .:id (org-id-uuid)))
-          (.:status (or .:status mygtd-task-default-status)))
-      (mygtd-db-query
-       `[:insert :into task
-                 :values ([,.:id ,.:name ,.:category ,.:status
-                                 ,.:timestr ,.:period ,.:deadline
-                                 ,.:location ,.:device ,.:parent])]))))
-
-(defun mygtd-task-multi-add (plist-list)
-  "Add multiple tasks to database according to a PLIST-LIST."
-  (dolist (plist plist-list)
-    (mygtd-task-add plist)))
-
-;;; task icon
-
 (defun mygtd-task-icon (status)
   "Icon for each status."
   (pcase status
@@ -94,7 +69,30 @@ according to FROM-TIME and TO-TIME."
       ;; e.g. 20220913 -> 20220914 = migrate(>)
       (_ mygtd-task-icon-migrate))))
 
+(defun mygtd-task-interval-query (time)
+  "Return a interval of all tasks.
+The interval could be daily, monthly or yearly."
+  (mygtd-query-result-plist
+   'task (mygtd-db-query
+          `[:select * :from task :where (like timestr ,(concat "%" time ",%"))])))
 
+(defun mygtd-task-add (plist)
+  "Add a task to database according to a PLIST."
+  (let-alist (plist->alist plist)
+    (let ((.:id (or .:id (org-id-uuid)))
+          (.:status (or .:status mygtd-task-default-status)))
+      (mygtd-db-query
+       `[:insert :into task
+                 :values ([,.:id ,.:name ,.:category ,.:status
+                                 ,.:timestr ,.:period ,.:deadline
+                                 ,.:location ,.:device ,.:parent])]))))
+
+(defun mygtd-task-multi-add (plist-list)
+  "Add multiple tasks to database according to a PLIST-LIST."
+  (dolist (plist plist-list)
+    (mygtd-task-add plist)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Mygtd Daily
 
 (defvar mygtd-daily-ewoc nil)
@@ -104,11 +102,14 @@ according to FROM-TIME and TO-TIME."
 
 (defvar mygtd-daily-buffer "*Mygtd Daily*")
 
-;; (defface mygtd-icon-done-face
-;;   '((t warning)))
-
-;; (defvar mygtd-icon-todo-face
-;;   '((t warning)))
+(defvar mygtd-daily-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" #'mygtd-daily-show-previous)
+    (define-key map "n" #'mygtd-daily-show-next)
+    (define-key map "d" #'mygtd-daily-task-finish)
+    (define-key map "u" #'mygtd-daily-task-undo)
+    (define-key map "G" #'mygtd-daily-refresh)
+    map))
 
 (defun mygtd-daily-pp (data)
   ;; timestr should contains mygtd-daily-date
@@ -132,34 +133,21 @@ according to FROM-TIME and TO-TIME."
             (insert (format "• %s %s" icon name)))))
     (insert "No daily tasks.")))
 
-(defvar mygtd-daily-mode-map nil)
-
 (defun mygtd-daily-buffer-setup ()
   "Setup the buffer of `mygtd-daily-mode'."
   (let ((inhibit-read-only t))
     (kill-all-local-variables)
     (setq major-mode 'mygtd-daily-mode
           mode-name "Mygtd Daily")
-    (use-local-map mygtd-daily-mode-map)
     (erase-buffer)
-    (buffer-disable-undo)))
-
-(defun mygtd-daily-keymap-setup ()
-  "Setup the keymap of `mygtd-daily-mode'."
-  (setq mygtd-daily-mode-map
-        (let ((map (make-sparse-keymap)))
-          (define-key map "p" #'mygtd-daily-show-previous)
-          (define-key map "n" #'mygtd-daily-show-next)
-          (define-key map "d" #'mygtd-daily-task-finish)
-          (define-key map "u" #'mygtd-daily-task-undo)
-          map)))
+    (buffer-disable-undo)
+    (use-local-map mygtd-daily-mode-map)))
 
 (defun mygtd-daily-show (&optional date)
   "Show the view of mygtd-daily buffer."
   (interactive)
   (switch-to-buffer (get-buffer-create mygtd-daily-buffer))
   (mygtd-daily-buffer-setup)
-  (mygtd-daily-keymap-setup)
   (let* ((date (or date (format-time-string "%Y%m%d")))
          (ewoc (ewoc-create
                 'mygtd-daily-pp
@@ -176,6 +164,7 @@ according to FROM-TIME and TO-TIME."
   (mygtd-mode 1)
   (read-only-mode 1))
 
+;;;###autoload
 (defun mygtd-daily-show-next ()
   "Switch to the view of next date"
   (interactive)
@@ -183,6 +172,7 @@ according to FROM-TIME and TO-TIME."
    (format-time-string "%Y%m%d" (+ (mygtd-date-to-second mygtd-daily-date)
                                    (* 24 60 60)))))
 
+;;;###autoload
 (defun mygtd-daily-show-previous ()
   "Switch to the view of previous date"
   (interactive)
@@ -190,9 +180,13 @@ according to FROM-TIME and TO-TIME."
    (format-time-string "%Y%m%d" (- (mygtd-date-to-second mygtd-daily-date)
                                    (* 24 60 60)))))
 
+;;;###autoload
 (defun mygtd-daily-refresh ()
-  )
+  "Force to refresh mygtd daily ewoc buffer."
+  (interactive)
+  (ewoc-refresh mygtd-daily-ewoc))
 
+;;;###autoload
 (defun mygtd-daily-task-finish (&optional task-id)
   "Update the status to done for task with TASK-ID or task at point."
   (interactive)
@@ -200,12 +194,18 @@ according to FROM-TIME and TO-TIME."
   (let ((id (or task-id (mygtd-task-prop :id))))
     (mygtd-db-query `[:update task :set (= status "done") :where (= id ,id)])))
 
+;;;###autoload
 (defun mygtd-daily-task-undo (&optional task-id)
   "Update the status to todo for task with TASK-ID or task at point."
   (interactive)
   (mygtd-ewoc-update :status "todo")
   (let ((id (or task-id (mygtd-task-prop :id))))
     (mygtd-db-query `[:update task :set (= status "todo") :where (= id ,id)])))
+
+;;; switch to mygtd-edit-mode to add, delete or update task.
+;; when use mygtd-edit-mode: switch to a editable org-mode buffer.
+;;
+
 
 (define-minor-mode mygtd-mode
   "Minor mode for mygtd-daily."
