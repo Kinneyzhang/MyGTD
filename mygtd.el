@@ -37,19 +37,33 @@
 
 (defvar mygtd-task-default-status "todo")
 
-(defvar mygtd-task-icon-todo "☐") ;; ▢
+(defvar mygtd-task-org-todo "[ ]")
 
-(defvar mygtd-task-icon-done "☑") ;; √
+(defvar mygtd-task-org-done "[X]")
+
+(defvar mygtd-task-icon-todo "·") ;; ▢ ☐
+
+(defvar mygtd-task-icon-done "x") ;; √ ☑
 
 (defvar mygtd-task-icon-migrate ">")
 
 (defvar mygtd-task-icon-someday "<")
+
+;; ▶▷◀◁
+;; ■▢▣□
+;; ☐☒☑
 
 (defun mygtd-task-icon (status)
   "Icon for each status."
   (pcase status
     ("todo" mygtd-task-icon-todo)
     ("done" mygtd-task-icon-done)))
+
+(defun mygtd-task-org-icon (status)
+  "Icon for each status."
+  (pcase status
+    ("todo" mygtd-task-org-todo)
+    ("done" mygtd-task-org-done)))
 
 (defun mygtd-migrated-icon (from-time to-time)
   "Return the icon of migrate or someday status 
@@ -125,13 +139,52 @@ The interval could be daily, monthly or yearly."
              (length (length timelst)))
         (if (= curr-nth (1- length))
             ;; current date is the last one
-            (insert (format "• %s %s" (mygtd-task-icon status) name))
+            ;; (insert (format "• %s %s" (mygtd-task-icon status) name))
+            (insert (format "- %s %s" (mygtd-task-org-icon status) name))
           ;; current date is not the last one.
           ;; compare curr-time and next-time
           (let* ((next-time (nth (1+ curr-nth) timelst))
                  (icon (mygtd-migrated-icon curr-time next-time)))
-            (insert (format "• %s %s" icon name)))))
+            (insert (propertize (format "- [ ] %s" name) 'migrate icon)))))
     (insert "No daily tasks.")))
+
+;;; prettify
+
+(defvar mygtd-org-list-regexp
+  "^ *\\([0-9]+[).]\\|[*+-]\\) \\(\\[[ X-]\\] \\)?"
+  "Org list bullet and checkbox regexp.")
+
+(defun mygtd-org-checkbox-fontify (checkbox)
+  "Highlight org checkbox with NOTATION."
+  (pcase checkbox
+    ("[ ]"
+     (if-let ((icon (get-text-property (point) 'migrate)))
+         (add-text-properties (match-beginning 2) (1- (match-end 2))
+                              `(display ,icon face '(bold :foreground "lightblue")))
+       (add-text-properties
+        (match-beginning 2) (1- (match-end 2))
+        `(display ,mygtd-task-icon-todo face '(bold :foreground "lightblue")))))
+    ("[X]"
+     (add-text-properties
+      (match-beginning 2) (1- (match-end 2))
+      `(display ,mygtd-task-icon-done face '(bold :foreground "lightblue"))))))
+
+(defun mygtd-org-list-fontify (beg end)
+  "Highlight org list bullet between BEG and END."
+  (save-excursion
+    (goto-char beg)
+    (while (re-search-forward mygtd-org-list-regexp end t)
+      (with-silent-modifications
+        (add-text-properties (match-beginning 1) (match-end 1) '(display "•"))
+        (when (match-beginning 2)
+          (pcase (match-string-no-properties 2)
+            ;; ("[-] " (mygtd-org-checkbox-fontify "☐"))
+            ("[ ] " (mygtd-org-checkbox-fontify mygtd-task-org-todo))
+            ("[X] " (mygtd-org-checkbox-fontify mygtd-task-org-done))))))))
+
+(defun mygtd-daily-prettify ()
+  "Prettify the buffer of mygtd daily."
+  )
 
 (defun mygtd-daily-buffer-setup ()
   "Setup the buffer of `mygtd-daily-mode'."
@@ -204,7 +257,20 @@ The interval could be daily, monthly or yearly."
 
 ;;; switch to mygtd-edit-mode to add, delete or update task.
 ;; when use mygtd-edit-mode: switch to a editable org-mode buffer.
-;;
+
+(defun mygtd-edit-mode ()
+  
+  )
+
+(defun mygtd-change-to-edit-mode ()
+  (interactive)
+  (unless (derived-mode-p 'mygtd-daily-mode)
+    (error "Not a mygtd daily buffer."))
+  )
+
+(define-derived-mode mygtd-edit-mode org-mode "Mygtd Edit"
+  "Define mygtd-edit-mode derived from org-mode."
+  )
 
 
 (define-minor-mode mygtd-mode
@@ -214,8 +280,11 @@ The interval could be daily, monthly or yearly."
   :require 'mygtd
   (if mygtd-mode
       (progn
+        (jit-lock-register #'mygtd-org-list-fontify)
+        (mygtd-org-list-fontify (point-min) (point-max))
         (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
         (hl-line-mode 1))
+    (jit-lock-unregister #'mygtd-org-list-fontify)
     (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))
 
 (provide 'mygtd)
