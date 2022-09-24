@@ -42,22 +42,17 @@
 
 (defconst mygtd-db--table-schemata
   '((task
-     [(id :primary-key)
-      (name :not-null)
-      (category :not-null)
-      (status :not-null)
-      (timestr)
-      (period)
-      (deadline)
-      (location)
-      (device)
-      (parent)])
-    (proj
-     [(id :primary-key)
-      (name :not-null)
-      (status :not-null)
-      (deadline)
-      (parent)])))
+     [(id :primary-key) (name :not-null) (category :not-null)
+      (status :not-null) (period) (deadline)
+      (location) (device) (parent)])
+    (migrate
+     [(id :not-null) (time :not-null)] ;; year month day
+     (:foreign-key [id] :references task [id] :on-delete :cascade))
+    (order
+     [(time :not-null) (idstr :not-null)])
+    (project
+     [(id :primary-key) (name :not-null) (status :not-null)
+      (deadline) (parent)])))
 
 (defun mygtd-db--get-conn ()
   "Return the mygtd database connection with key PATH."

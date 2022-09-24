@@ -90,16 +90,38 @@ The interval could be daily, monthly or yearly."
    'task (mygtd-db-query
           `[:select * :from task :where (like timestr ,(concat "%" time ",%"))])))
 
+(defun mygtd--time-range (time)
+  "Return the range according to mygtd TIME."
+  (let ((len (length time)))
+    (pcase len
+      (4 "year") (6 "month") (8 "day")
+      (_ (error "Invalid format of mygtd time!")))))
+
+;; 获取一个ewoc buffer里面的所有 data list，拼成 idstr
+(defun mygtd-task-order-update (time)
+  "Add or update the task order table according to TIME
+ and current tasks in buffer."
+  (let ((idstr )))
+  (mygtd-db-query
+   `[:insert :into order :values ([,time])]))
+
 (defun mygtd-task-add (plist)
-  "Add a task to database according to a PLIST."
+  "Add a task to database according to a PLIST.
+1. Add the basic task info into task table.
+2. Add a record into migrate table.
+3. Add or update the order table according to the time in plist."
   (let-alist (plist->alist plist)
     (let ((.:id (or .:id (org-id-uuid)))
           (.:status (or .:status mygtd-task-default-status)))
       (mygtd-db-query
        `[:insert :into task
-                 :values ([,.:id ,.:name ,.:category ,.:status
-                                 ,.:timestr ,.:period ,.:deadline
-                                 ,.:location ,.:device ,.:parent])]))))
+                 :values ([,.:id ,.:name ,.:category ,.:status ,.:period ,.:deadline
+                                 ,.:location ,.:device ,.:parent])])
+      (mygtd-db-query
+       `[:insert :into migrate :values ([,.:id ,.:time])]))))
+
+(defun mygtd-task-migrate (id time)
+  )
 
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
@@ -125,6 +147,9 @@ The interval could be daily, monthly or yearly."
     (define-key map "G" #'mygtd-daily-refresh)
     map))
 
+(defun mygtd-migrate-records (id)
+  "Return a list of records from migrate table according to task ID.")
+
 (defun mygtd-daily-pp (data)
   ;; timestr should contains mygtd-daily-date
   (if data
@@ -133,8 +158,8 @@ The interval could be daily, monthly or yearly."
              (status (plist-get data :status))
              (name (plist-get data :name))
              (category (plist-get data :category))
-             (timestr (plist-get data :timestr))
-             (timelst (when timestr (split-string timestr  "," t " +")))
+             ;; get the icon of current task according to migrate table.
+             
              (curr-nth (seq-position timelst curr-time))
              (length (length timelst)))
         (if (= curr-nth (1- length))
