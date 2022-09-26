@@ -3,6 +3,9 @@
 (mygtd-db-query [:select * :from order])
 (mygtd-db-query [:select * :from project])
 
+(mygtd-db-query [:delete :from task])
+(mygtd-db-query [:delete :from migrate])
+
 (mygtd-task-multi-add
  '((:name "费曼学习法第七章总结" :category "work" :time "20220924")
    (:name "webSecurity 验证问题配合测试" :category "study" :time "20220924")
@@ -17,45 +20,14 @@
    (:name "阅读总结《费曼学习法》第五六章" :category "work" :time "20220924")
    (:name "研究 hammerspoon 的功能" :category "work" :time "20220924")))
 
+(mygtd-task-multi-add
+ '((:id "111" :name "test111" :category "work" :time "20220926")
+   (:id "222" :name "test222" :category "study" :time "20220926")
+   (:id "333" :name "test333" :category "work" :time "20220926")
+   (:id "444" :name "test444" :category "study" :time "20220926")))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defvar example-editors '("emacs" "vim" "vscode" "sublime text"))
-(defvar example-websites
-  '(("emacs" "https://www.gnu.org/software/emacs/")
-    ("vim" "https://www.vim.org")
-    ("vscode" "https://code.visualstudio.com")
-    ("sublime text" "https://www.sublimetext.com")))
-
-(with-twidget-buffer "*Twidget Test*"
-  (twidget-create 'twidget-choice
-    :bind 'example-editor
-    :choices example-editors
-    :format "\nEditors: [t]"
-    :value "emacs"
-    :separator "/"
-    :action (lambda (value)
-              (twidget-multi-update
-               'example-string `(:value ,(capitalize value))
-               'example-link `(:value ,(assoc value example-websites))))
-    :require t)
-  (twidget-create 'twidget-button
-    :value "#switch#"
-    :action (lambda (btn)
-              (let* ((choices example-editors)
-                     (editor (downcase example-editor))
-                     (nth (seq-position choices editor)))
-                (twidget-update
-                 'example-editor
-                 :value (nth (% (1+ nth) (length choices)) choices)))))
-  (twidget-insert "\n\n")
-  (twidget-create 'twidget-text
-    :bind 'example-string
-    :format "  - [t] is my favorite editor."
-    :value "Emacs"
-    :plain t)
-  (twidget-create 'twidget-text
-    :bind 'example-link
-    :format "\n  - The website of [t0] is [t1]."
-    :value '("emacs" "https://www.gnu.org/software/emacs/")
-    :plain t))
+(mygtd-db-query [:insert :into order :values (["20220926" "111,222,333,444"])])
+(mygtd-db-query [:delete :from order])

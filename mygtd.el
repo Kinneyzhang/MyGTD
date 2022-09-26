@@ -150,6 +150,14 @@ The interval could be daily, monthly or yearly."
 (defun mygtd-migrate-records (id)
   "Return a list of records from migrate table according to task ID.")
 
+(defun mygtd-order-table-records (time)
+  "Return a list of records on specific TIME."
+  (promise-then
+   (mygtd-db-order-idstr time)
+   (lambda (idstr)
+     (let ((id-lst (split-string idstr "," t "[ ]+")))
+       (message "%S" (mapcar #'mygtd-db-task-records id-lst))))))
+
 (defun mygtd-daily-pp (data)
   ;; timestr should contains mygtd-daily-date
   (if data
@@ -158,10 +166,8 @@ The interval could be daily, monthly or yearly."
              (status (plist-get data :status))
              (name (plist-get data :name))
              (category (plist-get data :category))
-             ;; get the icon of current task according to migrate table.
              
-             (curr-nth (seq-position timelst curr-time))
-             (length (length timelst)))
+             )
         (if (= curr-nth (1- length))
             ;; current date is the last one
             ;; (insert (format "• %s %s" (mygtd-task-icon status) name))

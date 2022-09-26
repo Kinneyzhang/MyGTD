@@ -77,11 +77,12 @@ The 'mygtd format of time' are like 20220916, 202209, 2022 etc."
 
 ;; (date-to-time "2022-09-15 00:00:00")
 
-(defun mygtd-query-result-plist (type query-result)
-  "Convert the db query result to a list of plist."
+(defun mygtd-query-result-plist (table query-result)
+  "Convert the db QUERY-RESULT to a list of plist.
+TABLE is the table name."
   (let ((kwd-lst (mapcar (lambda (el)
                            (intern (concat ":" (symbol-name (car el)))))
-                         (cadr (assoc type mygtd-db--table-schemata)))))
+                         (cadr (assoc table mygtd-db--table-schemata)))))
     (mapcar (lambda (data)
               (let ((res))
                 ;; FIXME: replace with a built-in function if exists.

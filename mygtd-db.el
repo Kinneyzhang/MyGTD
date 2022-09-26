@@ -30,6 +30,7 @@
 
 ;;; Code:
 
+(require 'promise)
 (require 'emacsql)
 (require 'emacsql-sqlite)
 
@@ -104,5 +105,22 @@ SQL can be either the emacsql vector representation, or a string."
   (interactive)
   (mygtd-db--close)
   (delete-file mygtd-db-file))
+
+;;; Specific table query
+
+(defun mygtd-db-order-idstr (time)
+  (promise-new
+   (lambda (resolve _reject)
+     (funcall resolve (caar (mygtd-db-query `[:select idstr :from order
+                                                      :where (= time ,time)]))))))
+(mygtd-order-table-records "20220926")
+
+(defun mygtd-db-task-records (id)
+  "Return the records of task with task ID."
+  (car (mygtd-query-result-plist
+        'task (mygtd-db-query `[:select * :from task :where (= id ,id)]))))
+
+(mygtd-db-task-records "111")
+(mygtd-db-task-records "222")
 
 (provide 'mygtd-db)
