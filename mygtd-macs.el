@@ -70,14 +70,29 @@ The 'mygtd format of time' are like 20220916, 202209, 2022 etc."
     (_ (error "Invalid format of mygtd time!"))))
 
 (defun mygtd-date-to-second (date)
+  "Convert mygtd date to second."
   (time-to-seconds (date-to-time (format "%s-%s-%s 00:00:00"
                                          (substring date 0 4)
                                          (substring date 4 6)
                                          (substring date 6)))))
 
-;; (date-to-time "2022-09-15 00:00:00")
+(defun mygtd-time-less-p (time1 time2)
+  "Judge if TIME1 is less than TIME2."
+  (if (= (length time1) (length time2))
+      (pcase (length time1)
+        (8 (time-less-p (mygtd-date-to-second time1) (mygtd-date-to-second time2)))
+        (6 (< (string-to-number (substring time1 4 6))
+              (string-to-number (substring time2 4 6))))
+        (4 (< (string-to-number time1) (string-to-number time2))))
+    (error "Invalid mygtd time number comparation: %s, %s" time1 time2)))
 
-(defun mygtd-query-result-plist (table query-result)
+(defun mygtd-time-wider-p (time1 time2)
+  "Judge if TIME1 is wider than TIME2."
+  (if (= (length time1) (length time2))
+      (error "Invalid mygtd time wide comparation: %s, %s" time1 time2)
+    (< (length time1) (length time2))))
+
+(defun mygtd-query-wrapper (table query-result)
   "Convert the db QUERY-RESULT to a list of plist.
 TABLE is the table name."
   (let ((kwd-lst (mapcar (lambda (el)

@@ -45,9 +45,13 @@
 
 (defvar mygtd-task-icon-done "x") ;; √ ☑
 
-(defvar mygtd-task-icon-migrate ">")
+(defvar mygtd-task-icon-left1 "<")
 
-(defvar mygtd-task-icon-someday "<")
+(defvar mygtd-task-icon-right1 ">")
+
+(defvar mygtd-task-icon-left2 "«")
+
+(defvar mygtd-task-icon-right2 "»")
 
 ;; ▶▷◀◁
 ;; ■▢▣□
@@ -82,13 +86,6 @@ according to FROM-TIME and TO-TIME."
       ((pred (> to-len)) mygtd-task-icon-migrate)
       ;; e.g. 20220913 -> 20220914 = migrate(>)
       (_ mygtd-task-icon-migrate))))
-
-(defun mygtd-task-interval-query (time)
-  "Return a interval of all tasks.
-The interval could be daily, monthly or yearly."
-  (mygtd-query-result-plist
-   'task (mygtd-db-query
-          `[:select * :from task :where (like timestr ,(concat "%" time ",%"))])))
 
 (defun mygtd--time-range (time)
   "Return the range according to mygtd TIME."
@@ -147,36 +144,27 @@ The interval could be daily, monthly or yearly."
     (define-key map "G" #'mygtd-daily-refresh)
     map))
 
-(defun mygtd-migrate-records (id)
-  "Return a list of records from migrate table according to task ID.")
-
-(defun mygtd-order-table-records (time)
-  "Return a list of records on specific TIME."
-  (promise-then
-   (mygtd-db-order-idstr time)
-   (lambda (idstr)
-     (let ((id-lst (split-string idstr "," t "[ ]+")))
-       (message "%S" (mapcar #'mygtd-db-task-records id-lst))))))
+;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
 
 (defun mygtd-daily-pp (data)
   ;; timestr should contains mygtd-daily-date
   (if data
       (let* ((curr-time mygtd-daily-date)
              (id (plist-get data :id))
-             (status (plist-get data :status))
              (name (plist-get data :name))
              (category (plist-get data :category))
-             
-             )
-        (if (= curr-nth (1- length))
-            ;; current date is the last one
-            ;; (insert (format "• %s %s" (mygtd-task-icon status) name))
-            (insert (format "- %s %s" (mygtd-task-org-icon status) name))
-          ;; current date is not the last one.
-          ;; compare curr-time and next-time
-          (let* ((next-time (nth (1+ curr-nth) timelst))
-                 (icon (mygtd-migrated-icon curr-time next-time)))
-            (insert (propertize (format "- [ ] %s" name) 'migrate icon)))))
+             (status (plist-get data :status))
+             (period (plist-get data :period))
+             (deadline (plist-get data :deadline))
+             (location (plist-get data :location))
+             (device (plist-get data :device))
+             (parent (plist-get data :parent)))
+        (promise-then
+         (mygtd-task-icon id time)
+         (lambda (icon)
+           (if (string= status "todo")
+               (insert (propertize (format "- [ ] %s" name) 'icon icon))
+             (insert (format "- [X] %s" name))))))
     (insert "No daily tasks.")))
 
 ;;; prettify
@@ -189,12 +177,9 @@ The interval could be daily, monthly or yearly."
   "Highlight org checkbox with NOTATION."
   (pcase checkbox
     ("[ ]"
-     (if-let ((icon (get-text-property (point) 'migrate)))
-         (add-text-properties (match-beginning 2) (1- (match-end 2))
-                              `(display ,icon face '(bold :foreground "lightblue")))
-       (add-text-properties
-        (match-beginning 2) (1- (match-end 2))
-        `(display ,mygtd-task-icon-todo face '(bold :foreground "lightblue")))))
+     (let ((icon (get-text-property (point) 'icon)))
+       (add-text-properties (match-beginning 2) (1- (match-end 2))
+                            `(display ,icon face '(bold :foreground "lightblue")))))
     ("[X]"
      (add-text-properties
       (match-beginning 2) (1- (match-end 2))
@@ -237,16 +222,18 @@ The interval could be daily, monthly or yearly."
                 'mygtd-daily-pp
                 (concat (propertize (concat "Mygtd Daily\n\n") 'face '(:height 1.5))
                         (propertize (concat (mygtd-time-to-str date) "\n")
-                                    'face '(:height 1.1)))))
-         (datas (mygtd-task-interval-query date)))
+                                    'face '(:height 1.1))))))
     (setq mygtd-daily-date date)
     (set (make-local-variable 'mygtd-daily-ewoc) ewoc)
-    (if datas
-        (dolist (data datas)
-          (ewoc-enter-last ewoc data))
-      (ewoc-enter-last ewoc nil)))
-  (mygtd-mode 1)
-  (read-only-mode 1))
+    (promise-then
+     (mygtd-db-order-records date)
+     (lambda (datas)
+       (if datas
+           (dolist (data datas)
+             (ewoc-enter-last ewoc data))
+         (ewoc-enter-last ewoc nil))))
+    (mygtd-mode 1)
+    (read-only-mode 1)))
 
 ;;;###autoload
 (defun mygtd-daily-show-next ()
