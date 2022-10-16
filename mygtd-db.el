@@ -30,7 +30,6 @@
 
 ;;; Code:
 
-(require 'promise)
 (require 'emacsql)
 (require 'emacsql-sqlite)
 
@@ -114,50 +113,35 @@ SQL can be either the emacsql vector representation, or a string."
 Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)"
   (car (mygtd-query-wrapper
         'task (mygtd-db-query `[:select * :from task :where (= id ,id)]))))
-;; (mygtd-db-task-records "111")
 
 ;; migrate table
 
 (defun mygtd-db-migrate-tasks (time)
   "Return a list of task id at a specific TIME."
-  (promise-new
-   (lambda (resolve _reject)
-     (funcall resolve (mapcar #'car (mygtd-db-query `[:select id :from migrate
-                                                              :where (= time ,time)]))))))
+  (mapcar #'car (mygtd-db-query `[:select id :from migrate
+                                          :where (= time ,time)])))
 
 (defun mygtd-db-migrate-timelst (id)
   "Return all task migration record with task id ID."
-  (promise-new
-   (lambda (resolve _reject)
-     (funcall resolve (mapcar #'car (mygtd-db-query
-                                     `[:select time :from migrate :where (= id ,id)]))))))
-
-(mygtd-db-migrate-timelst "111")
-(mygtd-db-migrate-records "111")
+  (mapcar #'car (mygtd-db-query
+                 `[:select time :from migrate :where (= id ,id)])))
 
 (defun mygtd-task-icon (id time)
   "Return task icon with task ID and TIME."
-  (promise-then
-   (mygtd-db-migrate-timelst id)
-   (lambda (timelst)
-     (let* ((len (length timelst))
-            (nth (seq-position timelst time)))
-       (if (= nth (1- len))
-           mygtd-task-icon-todo
-         (let* ((from-time time)
-                (to-time (seq-elt timelst (1+ nth))))
-           (if (= (length from-time) (length to-time))
-               (if (mygtd-time-less-p from-time to-time)
-                   mygtd-task-icon-right1
-                 mygtd-task-icon-left1)
-             (if (mygtd-time-wider-p from-time to-time)
-                 mygtd-task-icon-right2
-               mygtd-task-icon-left2))))))))
-
-;; 页面任务迁移保存的时候，如果迁移到当前的time，不产生迁移记录
-
-
-;; (mygtd-migrated-icon "202209" "202210")
+  (let* ((timelst (mygtd-db-migrate-timelst id))
+         (len (length timelst))
+         (nth (seq-position timelst time)))
+    (if (= nth (1- len))
+        mygtd-task-icon-todo
+      (let* ((from-time time)
+             (to-time (seq-elt timelst (1+ nth))))
+        (if (= (length from-time) (length to-time))
+            (if (mygtd-time-less-p from-time to-time)
+                mygtd-task-icon-right1
+              mygtd-task-icon-left1)
+          (if (mygtd-time-wider-p from-time to-time)
+              mygtd-task-icon-right2
+            mygtd-task-icon-left2))))))
 
 (defun mygtd-db-migrate-records (id)
   "Return the migration records according to task ID."
@@ -165,27 +149,12 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
    'migrate
    (mygtd-db-query `[:select * :from migrate :where (= id ,id)])))
 
-;; (mygtd-db-query [:select * :from migrate])
-;; (mygtd-db-query [:delete :from migrate])
-;; (mygtd-db-query `[:insert-into migrate :values (["111" "20220926"])])
-;; (mygtd-db-query `[:insert-into migrate :values (["111" "20221014"])])
-;; (mygtd-db-query `[:insert-into migrate :values (["111" "202210"])])
-;; (mygtd-db-query `[:insert-into migrate :values (["111" "20221015"])])
-;; (mygtd-db-migrate-records "111")
-
-(defun mygtd-db-order-records (time)
-  )
-
 ;; when you create a new task, it should add a record both in 'task' and 'migrate' table
 
 (defun mygtd-db-order-idstr (time)
   "Return task id string at a specific TIME."
-  (promise-new
-   (lambda (resolve _reject)
-     (funcall resolve (caar (mygtd-db-query `[:select idstr :from order
-                                                      :where (= time ,time)]))))))
-
-;; (mygtd-db-migrate-tasks "20220926")
+  (caar (mygtd-db-query `[:select idstr :from order
+                                  :where (= time ,time)])))
 
 (defun mygtd-db-order-records (time)
   "Return a list of records on specific TIME."
@@ -194,24 +163,14 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   ;; 2. If there is no record in 'order' table, insert data by calulating records in 'migrate' table.
   ;; 3. If there is record in 'order' table, query then return it.
   ;; 4. when saving a mygtd time page, update data in 'order' table.
-  (promise-then
-   (mygtd-db-order-idstr time)
-   (lambda (idstr)
-     (if idstr
-         (let ((idlst (split-string idstr "," t "[ ]+")))
-           ;; (message "%s" (mapcar #'mygtd-db-task-records idlst))
-           (mapcar #'mygtd-db-task-records idlst))
-       ;; no record in 'order' table
-       (promise-then
-        (mygtd-db-migrate-tasks time)
-        (lambda (idlst)
-          ;; insert by calulating records in 'migrate' table, then return data
-          (when idlst
-            (mygtd-db-query `[:insert-into order :values ([,time ,(string-join idlst ",")])])
-            (mapcar #'mygtd-db-task-records idlst))))))))
-
-;; (mygtd-db-query [:select * :from task])
-;; (mygtd-db-query [:select * :from migrate])
-;; (mygtd-db-query [:select * :from order])
+  (if-let* ((idstr (mygtd-db-order-idstr time))
+           (idlst (split-string idstr "," t "[ ]+")))
+      (mapcar #'mygtd-db-task-records idlst)
+    ;; no record in 'order' table
+    ;; insert by calulating records in 'migrate' table, then return data
+    (when-let ((idlst (mygtd-db-migrate-tasks time)))
+      (mygtd-db-query
+       `[:insert-into order :values ([,time ,(string-join idlst ",")])])
+      (mapcar #'mygtd-db-task-records idlst))))
 
 (provide 'mygtd-db)

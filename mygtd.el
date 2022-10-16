@@ -57,36 +57,6 @@
 ;; ■▢▣□
 ;; ☐☒☑
 
-(defun mygtd-task-icon (status)
-  "Icon for each status."
-  (pcase status
-    ("todo" mygtd-task-icon-todo)
-    ("done" mygtd-task-icon-done)))
-
-(defun mygtd-task-org-icon (status)
-  "Icon for each status."
-  (pcase status
-    ("todo" mygtd-task-org-todo)
-    ("done" mygtd-task-org-done)))
-
-(defun mygtd-migrated-icon (from-time to-time)
-  "Return the icon of migrate or someday status 
-according to FROM-TIME and TO-TIME."
-  ;; if has not timestr, according to todo or done in status
-  ;; if has timestr, compare current and the next timestr
-  ;;   if wide(curr) > wide(next): migrate: > 
-  ;;   if wide(curr) < wide(next): someday: <
-  ;;   if year/month/date(curr) < year/month/date(next): migrate: >
-  (let ((from-len (length from-time))
-        (to-len (length to-time)))
-    (pcase from-len
-      ;; e.g. 20220914 -> 202209 = someday(<)
-      ((pred (< to-len)) mygtd-task-icon-someday)
-      ;; e.g. 202209 -> 20220914 = migrate(>)
-      ((pred (> to-len)) mygtd-task-icon-migrate)
-      ;; e.g. 20220913 -> 20220914 = migrate(>)
-      (_ mygtd-task-icon-migrate))))
-
 (defun mygtd--time-range (time)
   "Return the range according to mygtd TIME."
   (let ((len (length time)))
@@ -147,9 +117,8 @@ according to FROM-TIME and TO-TIME."
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
 
 (defun mygtd-daily-pp (data)
-  ;; timestr should contains mygtd-daily-date
   (if data
-      (let* ((curr-time mygtd-daily-date)
+      (let* ((time mygtd-daily-date)
              (id (plist-get data :id))
              (name (plist-get data :name))
              (category (plist-get data :category))
@@ -159,12 +128,10 @@ according to FROM-TIME and TO-TIME."
              (location (plist-get data :location))
              (device (plist-get data :device))
              (parent (plist-get data :parent)))
-        (promise-then
-         (mygtd-task-icon id time)
-         (lambda (icon)
-           (if (string= status "todo")
-               (insert (propertize (format "- [ ] %s" name) 'icon icon))
-             (insert (format "- [X] %s" name))))))
+        (if (string= status "todo")
+            (insert (propertize (format "- [ ] %s" name)
+                                'icon (mygtd-task-icon id time)))
+          (insert (format "- [X] %s" name))))
     (insert "No daily tasks.")))
 
 ;;; prettify
@@ -179,11 +146,11 @@ according to FROM-TIME and TO-TIME."
     ("[ ]"
      (let ((icon (get-text-property (point) 'icon)))
        (add-text-properties (match-beginning 2) (1- (match-end 2))
-                            `(display ,icon face '(bold :foreground "lightblue")))))
+                            `(display ,icon))))
     ("[X]"
      (add-text-properties
       (match-beginning 2) (1- (match-end 2))
-      `(display ,mygtd-task-icon-done face '(bold :foreground "lightblue"))))))
+      `(display ,mygtd-task-icon-done)))))
 
 (defun mygtd-org-list-fontify (beg end)
   "Highlight org list bullet between BEG and END."
@@ -225,13 +192,10 @@ according to FROM-TIME and TO-TIME."
                                     'face '(:height 1.1))))))
     (setq mygtd-daily-date date)
     (set (make-local-variable 'mygtd-daily-ewoc) ewoc)
-    (promise-then
-     (mygtd-db-order-records date)
-     (lambda (datas)
-       (if datas
-           (dolist (data datas)
-             (ewoc-enter-last ewoc data))
-         (ewoc-enter-last ewoc nil))))
+    (if-let ((datas (mygtd-db-order-records date)))
+        (dolist (data datas)
+          (ewoc-enter-last ewoc data))
+      (ewoc-enter-last ewoc nil))
     (mygtd-mode 1)
     (read-only-mode 1)))
 
