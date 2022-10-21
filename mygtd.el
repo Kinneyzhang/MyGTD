@@ -41,9 +41,9 @@
 
 (defvar mygtd-task-org-done "[X]")
 
-(defvar mygtd-task-icon-todo "·") ;; ▢ ☐
+(defvar mygtd-task-icon-todo "☐") ;; ▢ ☐
 
-(defvar mygtd-task-icon-done "x") ;; √ ☑
+(defvar mygtd-task-icon-done "☑") ;; √ ☑
 
 (defvar mygtd-task-icon-left1 "<")
 
@@ -164,6 +164,10 @@
             ;; ("[-] " (mygtd-org-checkbox-fontify "☐"))
             ("[ ] " (mygtd-org-checkbox-fontify mygtd-task-org-todo))
             ("[X] " (mygtd-org-checkbox-fontify mygtd-task-org-done))))))))
+
+(defun mygtd-org-list-unfontify (beg end)
+  (save-excursion
+    (add-text-properties beg end )))
 
 (defun mygtd-daily-prettify ()
   "Prettify the buffer of mygtd daily."
