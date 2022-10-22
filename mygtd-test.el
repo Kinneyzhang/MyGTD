@@ -6,24 +6,25 @@
 (mygtd-db-query [:delete :from task])
 (mygtd-db-query [:delete :from migrate])
 
-;; (mygtd-task-multi-add
-;;  '((:name "费曼学习法第七章总结" :category "work" :time "20220924")
-;;    (:name "webSecurity 验证问题配合测试" :category "study" :time "20220924")
-;;    (:name "根据 so_nbr 和 deal_time 更新错单(刘璇)" :category "work" :time "20220924")
-;;    (:name "修改相关处理逻辑：判断是否需要回收" :category "work" :time "20220924")
-;;    (:name "参数加载配置文件修改(刘璇)" :category "work" :time "20220924")
-;;    (:name "概要设计文档" :category "study" :time "20220924")
-;;    (:name "详细设计文档" :category "work" :time "20220924")
-;;    (:name "analyse表: 增加字段 script_no 外键" :category "work"  :time "20220924")
-;;    (:name "列出 mygtd 需要开发的核心功能列表 后写架构性的方法。" :category "work" :time "20220924")
-;;    (:name "如何玩，如何会玩，如何才能使身心得到真正的方式和休息" :category "work" :time "20220924")
-;;    (:name "阅读总结《费曼学习法》第五六章" :category "work" :time "20220924")
-;;    (:name "研究 hammerspoon 的功能" :category "work" :time "20220924")))
+(mygtd-task-multi-add
+ '((:name "错单回收测试(文档)" :category "work" :time "20221021")
+   (:name "错单分发测试(文档)" :category "work" :time "20221021")
+   (:name "错单对外接口测试(文档)" :category "work" :time "20221021")
+   (:name "测试用例:BSCHUN_FUNC_20220922_0010" :category "work" :time "20221020")
+   (:name "reflect, reflect, reflect" :category "life" :time "20221020")
+   (:name "周报编写(在线文档、信点兵)" :category "work" :time "20221020")
+   (:name "svn,ppt进度更新" :category "work" :time "20221020")
+   (:name "错单回收测试" :category "work"  :time "20221020")
+   (:name "健身房跑步半小时" :category "life" :time "20221020")
+   (:name "晚上10点半按时睡觉" :category "life" :time "20221020")
+   (:name "错单回收时序问题" :category "work" :time "20221018")
+   (:name "支持多个分析标志位查询" :category "work" :time "20221018")
+   (:name "错单返回的标题按照最终展示的顺序返给前台" :category "work" :time "20221018")
+   (:name "mygtd构建一个展示任务列表的可用版本" :category "hack" :time "20221022")
+   (:name "200031错单时序问题回收成功场景测试" :category "work" :time "20221022")))
 
 (mygtd-task-multi-add
- '((:id "111" :name "test111" :category "work" :time "20221014")
-   (:id "222" :name "test222" :category "study" :time "20221014")
-   (:id "333" :name "test333" :category "work" :time "20221014")))
+ )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -45,4 +46,5 @@
 
 ;; (mygtd-migrated-icon "202209" "202210")
 
-(mygtd-db-migrate-timelst "111")
+(mygtd-db-migrate-timelst "222")
+(mygtd-task-icon "222" "20220926")

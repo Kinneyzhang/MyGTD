@@ -41,9 +41,9 @@
 
 (defvar mygtd-task-org-done "[X]")
 
-(defvar mygtd-task-icon-todo "☐") ;; ▢ ☐
+(defvar mygtd-task-icon-todo "□") ;; ▢ ☐ □
 
-(defvar mygtd-task-icon-done "☑") ;; √ ☑
+(defvar mygtd-task-icon-done "■") ;; √ ☑ ▣
 
 (defvar mygtd-task-icon-left1 "<")
 
@@ -87,9 +87,6 @@
       (mygtd-db-query
        `[:insert :into migrate :values ([,.:id ,.:time])]))))
 
-(defun mygtd-task-migrate (id time)
-  )
-
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
   (dolist (plist plist-list)
@@ -112,6 +109,8 @@
     (define-key map "d" #'mygtd-daily-task-finish)
     (define-key map "u" #'mygtd-daily-task-undo)
     (define-key map "G" #'mygtd-daily-refresh)
+    (define-key map "." #'mygtd-daily-goto-today)
+    (define-key map "j" #'mygtd-daily-goto-date)
     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
@@ -183,6 +182,7 @@
     (buffer-disable-undo)
     (use-local-map mygtd-daily-mode-map)))
 
+;;;###autoload
 (defun mygtd-daily-show (&optional date)
   "Show the view of mygtd-daily buffer."
   (interactive)
@@ -240,6 +240,22 @@
   (mygtd-ewoc-update :status "todo")
   (let ((id (or task-id (mygtd-task-prop :id))))
     (mygtd-db-query `[:update task :set (= status "todo") :where (= id ,id)])))
+
+;;;###autoload
+(defun mygtd-daily-goto-today ()
+  "Switch to today's mygtd daily buffer."
+  (interactive)
+  (let ((today (format-time-string "%Y%m%d")))
+    (mygtd-daily-show today)))
+
+;;;###autoload
+(defun mygtd-daily-goto-date ()
+  "Jump to a specific date by choosing in a calendar."
+  (interactive)
+  (let* ((curr-date (mygtd-date-to-second mygtd-daily-date))
+         (org-date (org-read-date nil nil nil nil curr-date))
+         (date (string-join (split-string org-date "-" t))))
+    (mygtd-daily-show date)))
 
 ;;; switch to mygtd-edit-mode to add, delete or update task.
 ;; when use mygtd-edit-mode: switch to a editable org-mode buffer.

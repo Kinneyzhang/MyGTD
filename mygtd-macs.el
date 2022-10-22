@@ -54,6 +54,54 @@
      (cons (car plist) (cadr plist))
      (plist->alist (cddr plist)))))
 
+(defvar mygtd-year-fmt "%Y")
+
+(defvar mygtd-month-fmt "%Y-%m")
+
+(defvar mygtd-date-fmt "%Y-%m-%d")
+
+(defun mygtd-year-shown (mygtd-year)
+  (format-time-string mygtd-year-fmt
+                      (mygtd-date-to-time (format "%s0101" mygtd-year))))
+
+(defun mygtd-month-shown (mygtd-month)
+  (format-time-string mygtd-month-fmt
+                      (mygtd-date-to-time (format "%s%s01" (substring mygtd-month 0 4)
+                                                  (substring mygtd-month 4 6)))))
+
+(defun mygtd-date-shown (mygtd-date)
+  (format-time-string mygtd-date-fmt (mygtd-date-to-time mygtd-date)))
+
+(mygtd-date-shown "20221010" "%Y-%d-%m")
+
+(defun mygtd-month-to-org-date (month)
+  (format "%s-%s-%s"
+          (substring date 0 4)
+          (substring date 4 6)
+          (substring date 6)))
+
+(defun mygtd-date-to-org-date (date)
+  (format "%s-%s-%s"
+          (substring date 0 4)
+          (substring date 4 6)
+          (substring date 6)))
+
+(defun mygtd-date-to-full-org-date (date)
+  (format "%s-%s-%s 00:00:00"
+          (substring date 0 4)
+          (substring date 4 6)
+          (substring date 6)))
+
+(defun mygtd-date-to-time (date)
+  "Convert mygtd date to second."
+  (date-to-time (mygtd-date-to-full-org-date date)))
+
+(defun mygtd-date-to-second (date)
+  "Convert mygtd date to second."
+  (time-to-seconds (mygtd-date-to-time date)))
+
+;; (mygtd-date-to-org-date "20221010")
+
 (defun mygtd-time-to-str (time)
   "Convert the mygtd format of time to meaningful time string.
 The 'mygtd format of time' are like 20220916, 202209, 2022 etc."
@@ -69,12 +117,9 @@ The 'mygtd format of time' are like 20220916, 202209, 2022 etc."
                (substring time 0 4)))
     (_ (error "Invalid format of mygtd time!"))))
 
-(defun mygtd-date-to-second (date)
-  "Convert mygtd date to second."
-  (time-to-seconds (date-to-time (format "%s-%s-%s 00:00:00"
-                                         (substring date 0 4)
-                                         (substring date 4 6)
-                                         (substring date 6)))))
+(defun mygtd-next-date (date num)
+  (format-time-string "%Y%m%d" (+ (mygtd-date-to-second mygtd-daily-date)
+                                  (* 24 60 60))))
 
 (defun mygtd-time-less-p (time1 time2)
   "Judge if TIME1 is less than TIME2."
