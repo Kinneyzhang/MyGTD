@@ -60,20 +60,6 @@
 
 (defvar mygtd-date-fmt "%Y-%m-%d")
 
-(defun mygtd-year-shown (mygtd-year)
-  (format-time-string mygtd-year-fmt
-                      (mygtd-date-to-time (format "%s0101" mygtd-year))))
-
-(defun mygtd-month-shown (mygtd-month)
-  (format-time-string mygtd-month-fmt
-                      (mygtd-date-to-time (format "%s%s01" (substring mygtd-month 0 4)
-                                                  (substring mygtd-month 4 6)))))
-
-(defun mygtd-date-shown (mygtd-date)
-  (format-time-string mygtd-date-fmt (mygtd-date-to-time mygtd-date)))
-
-(mygtd-date-shown "20221010" "%Y-%d-%m")
-
 (defun mygtd-month-to-org-date (month)
   (format "%s-%s-%s"
           (substring date 0 4)
@@ -100,7 +86,17 @@
   "Convert mygtd date to second."
   (time-to-seconds (mygtd-date-to-time date)))
 
-;; (mygtd-date-to-org-date "20221010")
+(defun mygtd-year-shown (mygtd-year)
+  (format-time-string mygtd-year-fmt
+                      (mygtd-date-to-time (format "%s0101" (substring mygtd-year 0 4)))))
+
+(defun mygtd-month-shown (mygtd-month)
+  (format-time-string mygtd-month-fmt
+                      (mygtd-date-to-time (format "%s%s01" (substring mygtd-month 0 4)
+                                                  (substring mygtd-month 4 6)))))
+
+(defun mygtd-date-shown (mygtd-date)
+  (format-time-string mygtd-date-fmt (mygtd-date-to-time mygtd-date)))
 
 (defun mygtd-time-to-str (time)
   "Convert the mygtd format of time to meaningful time string.

@@ -85,7 +85,10 @@
                  :values ([,.:id ,.:name ,.:category ,.:status ,.:period ,.:deadline
                                  ,.:location ,.:device ,.:parent])])
       (mygtd-db-query
-       `[:insert :into migrate :values ([,.:id ,.:time])]))))
+       `[:insert :into migrate :values ([,.:id ,.:time])]))
+    ))
+
+(ewoc-enter-last mygtd-daily-ewoc)
 
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
@@ -192,7 +195,7 @@
          (ewoc (ewoc-create
                 'mygtd-daily-pp
                 (concat (propertize (concat "Mygtd Daily\n\n") 'face '(:height 1.5))
-                        (propertize (concat (mygtd-time-to-str date) "\n")
+                        (propertize (concat (mygtd-date-shown date) "\n")
                                     'face '(:height 1.1))))))
     (setq mygtd-daily-date date)
     (set (make-local-variable 'mygtd-daily-ewoc) ewoc)
@@ -256,6 +259,17 @@
          (org-date (org-read-date nil nil nil nil curr-date))
          (date (string-join (split-string org-date "-" t))))
     (mygtd-daily-show date)))
+
+;;;###autoload
+(defun mygtd-daily-task-add ()
+  (interactive)
+  (let ((date mygtd-daily-date)
+        (name (completing-read "Input the task name: " nil))
+        (category (completing-read "Input the task category: " nil)))
+    (mygtd-task-add (list :id (org-id-uuid)
+                          :name name
+                          :category category
+                          :time date))))
 
 ;;; switch to mygtd-edit-mode to add, delete or update task.
 ;; when use mygtd-edit-mode: switch to a editable org-mode buffer.

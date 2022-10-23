@@ -23,9 +23,6 @@
    (:name "mygtd构建一个展示任务列表的可用版本" :category "hack" :time "20221022")
    (:name "200031错单时序问题回收成功场景测试" :category "work" :time "20221022")))
 
-(mygtd-task-multi-add
- )
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mygtd-db-query [:insert :into order :values (["20220926" "111,222,333,444"])])
