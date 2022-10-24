@@ -86,7 +86,8 @@
                                  ,.:location ,.:device ,.:parent])])
       (mygtd-db-query
        `[:insert :into migrate :values ([,.:id ,.:time])]))
-    ))
+    
+    (ewoc-enter-last mygtd-daily-ewoc plist)))
 
 ;; (ewoc-enter-last mygtd-daily-ewoc)
 
@@ -120,7 +121,8 @@
 
 (defun mygtd-daily-pp (data)
   (if data
-      (let* ((time mygtd-daily-date)
+      (let* ((time (or (plist-get data :time)
+                       mygtd-daily-date))
              (id (plist-get data :id))
              (name (plist-get data :name))
              (category (plist-get data :category))

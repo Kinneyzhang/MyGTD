@@ -6,6 +6,12 @@
 (mygtd-db-query [:delete :from task])
 (mygtd-db-query [:delete :from migrate])
 
+(mygtd-db-query [:select * :from task :where (= id "c780d1d1-6b1b-436f-bb7a-c4ebf08d63e2")])
+
+(mygtd-db-query [:select * :from migrate :where (= id "c780d1d1-6b1b-436f-bb7a-c4ebf08d63e2")])
+
+(mygtd-db-migrate-timelst "c780d1d1-6b1b-436f-bb7a-c4ebf08d63e2")
+
 (mygtd-task-multi-add
  '((:name "错单回收测试(文档)" :category "work" :time "20221021")
    (:name "错单分发测试(文档)" :category "work" :time "20221021")

@@ -131,8 +131,10 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (let* ((timelst (mygtd-db-migrate-timelst id))
          (len (length timelst))
          (nth (seq-position timelst time)))
+    (message "nth: %s; 1-len: %s" nth (1- len))
     (if (= nth (1- len))
-        mygtd-task-icon-todo
+        (progn
+          mygtd-task-icon-todo)
       (let* ((from-time time)
              (to-time (seq-elt timelst (1+ nth))))
         (if (= (length from-time) (length to-time))
