@@ -88,7 +88,7 @@
        `[:insert :into migrate :values ([,.:id ,.:time])]))
     ))
 
-(ewoc-enter-last mygtd-daily-ewoc)
+;; (ewoc-enter-last mygtd-daily-ewoc)
 
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
