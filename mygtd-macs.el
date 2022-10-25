@@ -37,6 +37,10 @@
   "Return the ewoc data at point."
   (ewoc-data (mygtd-ewoc-node)))
 
+(defun mygtd-ewoc-data-lst ()
+  "Return all data in current ewoc buffer."
+  (ewoc-collect mygtd-daily-ewoc #'consp))
+
 (defun mygtd-ewoc-update (prop val)
   (let ((node (mygtd-ewoc-node)))
     (ewoc-set-data node (plist-put (mygtd-ewoc-data) prop val))
@@ -53,6 +57,12 @@
     (cons
      (cons (car plist) (cadr plist))
      (plist->alist (cddr plist)))))
+
+(defun mygtd-idlst->idstr (idlst)
+  (string-join idlst ","))
+
+(defun mygtd-idstr->idlst (idstr)
+  (split-string idstr "," t "[ ]+"))
 
 (defvar mygtd-year-fmt "%Y")
 
@@ -139,13 +149,20 @@ TABLE is the table name."
   (let ((kwd-lst (mapcar (lambda (el)
                            (intern (concat ":" (symbol-name (car el)))))
                          (cadr (assoc table mygtd-db--table-schemata)))))
-    (mapcar (lambda (data)
-              (let ((res))
-                ;; FIXME: replace with a built-in function if exists.
-                (dotimes (i (length data))
-                  (setq res (append res (list (nth i kwd-lst) (nth i data)))))
-                res))
-            query-result)))
+    (if (not (consp (car query-result)))
+        ;; single query result
+        (let (res)
+          (dotimes (i (length query-result))
+            (setq res (append res (list (nth i kwd-lst) (nth i query-result)))))
+          res)
+      ;; multiple query result
+      (mapcar (lambda (data)
+                (let ((res))
+                  ;; FIXME: replace with a built-in function if exists.
+                  (dotimes (i (length data))
+                    (setq res (append res (list (nth i kwd-lst) (nth i data)))))
+                  res))
+              query-result))))
 
 (defvar mygtd-window-margin 3
   "Window margins of mygtd buffer window.")

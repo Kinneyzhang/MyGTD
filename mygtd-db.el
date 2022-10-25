@@ -131,7 +131,6 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (let* ((timelst (mygtd-db-migrate-timelst id))
          (len (length timelst))
          (nth (seq-position timelst time)))
-    (message "nth: %s; 1-len: %s" nth (1- len))
     (if (= nth (1- len))
         (progn
           mygtd-task-icon-todo)
@@ -158,6 +157,11 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (caar (mygtd-db-query `[:select idstr :from order
                                   :where (= time ,time)])))
 
+(defun mygtd-db-order-idlst (time)
+  "Return task id list at a specific TIME."
+  (when-let ((idstr (mygtd-db-order-idstr time)))
+    (mygtd-idstr->idlst idstr)))
+
 (defun mygtd-db-order-records (time)
   "Return a list of records on specific TIME."
   ;; When switch to a specific mygtd time page, do following actions:
@@ -165,14 +169,17 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   ;; 2. If there is no record in 'order' table, insert data by calulating records in 'migrate' table.
   ;; 3. If there is record in 'order' table, query then return it.
   ;; 4. when saving a mygtd time page, update data in 'order' table.
-  (if-let* ((idstr (mygtd-db-order-idstr time))
-           (idlst (split-string idstr "," t "[ ]+")))
-      (mapcar #'mygtd-db-task-records idlst)
-    ;; no record in 'order' table
-    ;; insert by calulating records in 'migrate' table, then return data
-    (when-let ((idlst (mygtd-db-migrate-tasks time)))
+  (let* ((curr-idlst (mygtd-db-order-idlst time))
+         (idlst (mygtd-db-migrate-tasks time))
+         (records (mapcar #'mygtd-db-task-records idlst)))
+    (if curr-idlst
+        (when (seq-difference curr-idlst idlst)
+          ;; update order table if there's difference
+          (mygtd-db-query `[:update order :set (= idstr ,idlst)
+                                    :where (= time ,time)]))
+      ;; no record in 'order' table
       (mygtd-db-query
-       `[:insert-into order :values ([,time ,(string-join idlst ",")])])
-      (mapcar #'mygtd-db-task-records idlst))))
+       `[:insert-into order :values ([,time ,(mygtd-idlst->idstr idlst)])]))
+    records))
 
 (provide 'mygtd-db)

@@ -3,6 +3,16 @@
 (mygtd-db-query [:select * :from order])
 (mygtd-db-query [:select * :from project])
 
+(mygtd-db-query
+ `[:select * :from migrate
+           :where (= id  ,(caar (mygtd-db-query [:select * :from task :where (= name "test111")])))])
+
+(mygtd-db-migrate-tasks "20221026")
+(mygtd-db-order-records "20221026")
+(mygtd-db-query [:select * :from order :where (= time "20221026")])
+
+(mygtd-query-wrapper 'task (car (mygtd-db-query [:select * :from task])))
+
 (mygtd-db-query [:delete :from task])
 (mygtd-db-query [:delete :from migrate])
 

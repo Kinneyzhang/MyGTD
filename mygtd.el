@@ -78,18 +78,19 @@
 2. Add a record into migrate table.
 3. Add or update the order table according to the time in plist."
   (let-alist (plist->alist plist)
-    (let ((.:id (or .:id (org-id-uuid)))
-          (.:status (or .:status mygtd-task-default-status)))
-      (mygtd-db-query
-       `[:insert :into task
-                 :values ([,.:id ,.:name ,.:category ,.:status ,.:period ,.:deadline
-                                 ,.:location ,.:device ,.:parent])])
-      (mygtd-db-query
-       `[:insert :into migrate :values ([,.:id ,.:time])]))
-    
-    (ewoc-enter-last mygtd-daily-ewoc plist)))
-
-;; (ewoc-enter-last mygtd-daily-ewoc)
+    (let* ((.:id (or .:id (org-id-uuid)))
+           (.:status (or .:status mygtd-task-default-status))
+           (data (list .:id .:name .:category .:status .:period
+                       .:deadline .:location .:device .:parent)))
+      (mygtd-db-query `[:insert :into task :values ([,@data])])
+      (mygtd-db-query `[:insert :into migrate :values ([,.:id ,.:time])])
+      (let ((plist (mygtd-query-wrapper 'task data)))
+        (if (mygtd-ewoc-data-lst)
+            (ewoc-enter-last mygtd-daily-ewoc plist)
+          ;; no task
+          (let ((node (ewoc-nth mygtd-daily-ewoc 0)))
+            (ewoc-set-data node plist)
+            (ewoc-invalidate mygtd-daily-ewoc node)))))))
 
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
@@ -115,6 +116,7 @@
     (define-key map "G" #'mygtd-daily-refresh)
     (define-key map "." #'mygtd-daily-goto-today)
     (define-key map "j" #'mygtd-daily-goto-date)
+    (define-key map "a" #'mygtd-daily-task-add)
     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
@@ -170,8 +172,14 @@
             ("[X] " (mygtd-org-checkbox-fontify mygtd-task-org-done))))))))
 
 (defun mygtd-org-list-unfontify (beg end)
+  "Unhighlight org list bullet between BEG and END."
   (save-excursion
-    (add-text-properties beg end )))
+    (goto-char beg)
+    (while (re-search-forward mygtd-org-list-regexp end t)
+      (with-silent-modifications
+        (add-text-properties (match-beginning 1) (match-end 1) '(display nil))
+        (when (match-beginning 2)
+          (add-text-properties (match-beginning 2) (1- (match-end 2)) '(display nil)))))))
 
 (defun mygtd-daily-prettify ()
   "Prettify the buffer of mygtd daily."
@@ -290,7 +298,6 @@
   "Define mygtd-edit-mode derived from org-mode."
   )
 
-
 (define-minor-mode mygtd-mode
   "Minor mode for mygtd-daily."
   :lighter " Mygtd"
@@ -303,6 +310,7 @@
         (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
         (hl-line-mode 1))
     (jit-lock-unregister #'mygtd-org-list-fontify)
+    (mygtd-org-list-unfontify (point-min) (point-max))
     (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))
 
 (provide 'mygtd)
