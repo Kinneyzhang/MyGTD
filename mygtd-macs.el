@@ -30,25 +30,30 @@
 
 ;;; Code:
 
-(defun mygtd-ewoc-node ()
-  (ewoc-locate mygtd-daily-ewoc))
+(defun mygtd-ewoc-pos-node (&optional pos)
+  (ewoc-locate mygtd-daily-ewoc pos))
 
-(defun mygtd-ewoc-data ()
+(defun mygtd-ewoc-pos-data (&optional pos)
   "Return the ewoc data at point."
-  (ewoc-data (mygtd-ewoc-node)))
+  (ewoc-data (mygtd-ewoc-pos-node pos)))
 
-(defun mygtd-ewoc-data-lst ()
+(defun mygtd-ewoc-pos-prop (prop &optional pos)
+  "Return the value of PROP for task at point."
+  (plist-get (mygtd-ewoc-pos-data pos) prop))
+
+(defun mygtd-ewoc-pos-update (prop val &optional pos)
+  (let ((node (mygtd-ewoc-pos-node pos)))
+    (ewoc-set-data node (plist-put (mygtd-ewoc-pos-data pos) prop val))
+    (ewoc-invalidate mygtd-daily-ewoc node)))
+
+(defun mygtd-ewoc-buffer-data ()
   "Return all data in current ewoc buffer."
   (ewoc-collect mygtd-daily-ewoc #'consp))
 
-(defun mygtd-ewoc-update (prop val)
-  (let ((node (mygtd-ewoc-node)))
-    (ewoc-set-data node (plist-put (mygtd-ewoc-data) prop val))
-    (ewoc-invalidate mygtd-daily-ewoc node)))
-
-(defun mygtd-task-prop (prop)
-  "Return the value of PROP for task at point."
-  (plist-get (mygtd-ewoc-data) prop))
+(defun mygtd-ewoc-buffer-prop (prop)
+  (mapcar (lambda (plst)
+            (plist-get plst prop))
+          (mygtd-ewoc-buffer-data)))
 
 (defun plist->alist (plist)
   "Convert a plist to a alist."

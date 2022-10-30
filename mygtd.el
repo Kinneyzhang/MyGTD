@@ -85,7 +85,7 @@
       (mygtd-db-query `[:insert :into task :values ([,@data])])
       (mygtd-db-query `[:insert :into migrate :values ([,.:id ,.:time])])
       (let ((plist (mygtd-query-wrapper 'task data)))
-        (if (mygtd-ewoc-data-lst)
+        (if (mygtd-ewoc-buffer-data)
             (ewoc-enter-last mygtd-daily-ewoc plist)
           ;; no task
           (let ((node (ewoc-nth mygtd-daily-ewoc 0)))
@@ -117,6 +117,7 @@
     (define-key map "." #'mygtd-daily-goto-today)
     (define-key map "j" #'mygtd-daily-goto-date)
     (define-key map "a" #'mygtd-daily-task-add)
+    (define-key map "D" #'mygtd-daily-task-delete)
     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
@@ -236,22 +237,22 @@
 (defun mygtd-daily-refresh ()
   "Force to refresh mygtd daily ewoc buffer."
   (interactive)
-  (ewoc-refresh mygtd-daily-ewoc))
+  (mygtd-daily-show mygtd-daily-date))
 
 ;;;###autoload
 (defun mygtd-daily-task-finish (&optional task-id)
   "Update the status to done for task with TASK-ID or task at point."
   (interactive)
-  (mygtd-ewoc-update :status "done")
-  (let ((id (or task-id (mygtd-task-prop :id))))
+  (when-let ((id (or task-id (mygtd-ewoc-pos-prop :id))))
+    (mygtd-ewoc-pos-update :status "done")
     (mygtd-db-query `[:update task :set (= status "done") :where (= id ,id)])))
 
 ;;;###autoload
 (defun mygtd-daily-task-undo (&optional task-id)
   "Update the status to todo for task with TASK-ID or task at point."
   (interactive)
-  (mygtd-ewoc-update :status "todo")
-  (let ((id (or task-id (mygtd-task-prop :id))))
+  (when-let ((id (or task-id (mygtd-ewoc-pos-prop :id))))
+    (mygtd-ewoc-pos-update :status "todo")
     (mygtd-db-query `[:update task :set (= status "todo") :where (= id ,id)])))
 
 ;;;###autoload
@@ -281,11 +282,23 @@
                           :category category
                           :time date))))
 
+;;;###autoload
+(defun mygtd-daily-task-delete ()
+  "Delete a daily task."
+  (interactive)
+  (if-let ((id (plist-get (mygtd-ewoc-pos-data) :id))
+           (inhibit-read-only t))
+      (progn
+        (ewoc-delete mygtd-daily-ewoc (mygtd-ewoc-pos-node))
+        (mygtd-db-task-delete id)
+        (unless (mygtd-ewoc-buffer-data)
+          (ewoc-enter-last mygtd-daily-ewoc nil)))
+    (message "No task to delete!")))
+
 ;;; switch to mygtd-edit-mode to add, delete or update task.
 ;; when use mygtd-edit-mode: switch to a editable org-mode buffer.
 
 (defun mygtd-edit-mode ()
-  
   )
 
 (defun mygtd-change-to-edit-mode ()

@@ -114,6 +114,9 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (car (mygtd-query-wrapper
         'task (mygtd-db-query `[:select * :from task :where (= id ,id)]))))
 
+(defun mygtd-db-task-delete (id)
+  (mygtd-db-query `[:delete :from task :where (= id ,id)]))
+
 ;; migrate table
 
 (defun mygtd-db-migrate-tasks (time)
@@ -162,24 +165,30 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (when-let ((idstr (mygtd-db-order-idstr time)))
     (mygtd-idstr->idlst idstr)))
 
+(defun mygtd-db-order-add (time idstr)
+  (mygtd-db-query `[:insert-into order :values ([,time ,idstr])]))
+
+(defun mygtd-db-order-update (time idstr)
+  (mygtd-db-query `[:update order :set (= idstr ,idstr) :where (= time ,time)]))
+
 (defun mygtd-db-order-records (time)
   "Return a list of records on specific TIME."
-  ;; When switch to a specific mygtd time page, do following actions:
-  ;; 1. query 'order' table by time
-  ;; 2. If there is no record in 'order' table, insert data by calulating records in 'migrate' table.
-  ;; 3. If there is record in 'order' table, query then return it.
-  ;; 4. when saving a mygtd time page, update data in 'order' table.
   (let* ((curr-idlst (mygtd-db-order-idlst time))
-         (idlst (mygtd-db-migrate-tasks time))
-         (records (mapcar #'mygtd-db-task-records idlst)))
+         (idlst (mygtd-db-migrate-tasks time)))
     (if curr-idlst
-        (when (seq-difference curr-idlst idlst)
-          ;; update order table if there's difference
-          (mygtd-db-query `[:update order :set (= idstr ,idlst)
-                                    :where (= time ,time)]))
-      ;; no record in 'order' table
-      (mygtd-db-query
-       `[:insert-into order :values ([,time ,(mygtd-idlst->idstr idlst)])]))
-    records))
+        (when (or (seq-difference curr-idlst idlst)
+                  (seq-difference idlst curr-idlst))
+          ;;; if there are differences between current order idlst
+          ;;; and idlist in migration table, use idlst in migration table.
+          ;;; Otherwise, use idlst in order table.
+          ;; (message "diff: update order table")
+          (setq curr-idlst idlst)
+          (mygtd-db-order-update time (mygtd-idlst->idstr curr-idlst)))
+      ;;; no record in 'order' table, add new according to migration table.
+      ;; (message "none: insert order table")
+      (setq curr-idlst idlst)
+      (mygtd-db-order-add time (mygtd-idlst->idstr curr-idlst)))
+    ;;; return the id list data according to order.
+    (mapcar #'mygtd-db-task-records curr-idlst)))
 
 (provide 'mygtd-db)

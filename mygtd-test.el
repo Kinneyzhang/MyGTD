@@ -1,20 +1,21 @@
+(mygtd-db-query [:select * :from project])
+
 (mygtd-db-query [:select * :from task])
 (mygtd-db-query [:select * :from migrate])
 (mygtd-db-query [:select * :from order])
-(mygtd-db-query [:select * :from project])
 
-(mygtd-db-query
- `[:select * :from migrate
-           :where (= id  ,(caar (mygtd-db-query [:select * :from task :where (= name "test111")])))])
+(mygtd-db-order-idlst "20221025")
+(mygtd-db-migrate-tasks "20221025")
+(mygtd-db-query [:select * :from order :where (= time "20221025")])
+(mygtd-db-order-records "20221025")
 
-(mygtd-db-migrate-tasks "20221026")
-(mygtd-db-order-records "20221026")
-(mygtd-db-query [:select * :from order :where (= time "20221026")])
+(mygtd-db-query [:delete :from order :where (= time "20221025")])
+
+(mygtd-db-query [:select * :from task :where (= id "d7f657a1-b853-4c02-a49a-8ada27dcc806")])
+(mygtd-db-query [:select * :from migrate :where (= id "d7f657a1-b853-4c02-a49a-8ada27dcc806")])
+(mygtd-db-query [:delete :from task :where (= id "d7f657a1-b853-4c02-a49a-8ada27dcc806")])
 
 (mygtd-query-wrapper 'task (car (mygtd-db-query [:select * :from task])))
-
-(mygtd-db-query [:delete :from task])
-(mygtd-db-query [:delete :from migrate])
 
 (mygtd-db-query [:select * :from task :where (= id "c780d1d1-6b1b-436f-bb7a-c4ebf08d63e2")])
 
