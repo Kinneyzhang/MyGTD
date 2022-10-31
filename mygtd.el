@@ -316,6 +316,7 @@
   :lighter " Mygtd"
   :keymap (let ((map (make-sparse-keymap))) map)
   :require 'mygtd
+  :global t
   (if mygtd-mode
       (progn
         (jit-lock-register #'mygtd-org-list-fontify)
