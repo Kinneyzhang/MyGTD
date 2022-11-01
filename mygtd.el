@@ -307,6 +307,12 @@
     (error "Not a mygtd daily buffer."))
   )
 
+(defun mygtd-toggle-read-only ()
+  (interactive)
+  (if (derived-mode-p 'mygtd-daily-mode)
+      (mygtd-change-to-edit-mode)
+    (read-only-mode 'toggle)))
+
 (define-derived-mode mygtd-edit-mode org-mode "Mygtd Edit"
   "Define mygtd-edit-mode derived from org-mode."
   )
