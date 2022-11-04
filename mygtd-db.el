@@ -46,7 +46,7 @@
       (deadline) (parent)])
     (task
      [(id :primary-key) (name :not-null) (category :not-null)
-      (status :not-null) (period) (deadline)
+      (status :not-null) (details) (period) (deadline)
       (location) (device) (parent)]
      (:foreign-key [parent] :references project [id] :on-delete :cascade))
     (migrate ;; 每次迁移会产生一条迁移记录
