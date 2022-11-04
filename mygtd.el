@@ -57,13 +57,6 @@
 ;; ■▢▣□
 ;; ☐☒☑
 
-(defun mygtd--time-range (time)
-  "Return the range according to mygtd TIME."
-  (let ((len (length time)))
-    (pcase len
-      (4 "year") (6 "month") (8 "day")
-      (_ (error "Invalid format of mygtd time!")))))
-
 ;; 获取一个ewoc buffer里面的所有 data list，拼成 idstr
 (defun mygtd-task-order-update (time)
   "Add or update the task order table according to TIME
@@ -80,7 +73,7 @@
   (let-alist (plist->alist plist)
     (let* ((.:id (or .:id (org-id-uuid)))
            (.:status (or .:status mygtd-task-default-status))
-           (data (list .:id .:name .:category .:status .:period
+           (data (list .:id .:name .:category .:status .:details .:period
                        .:deadline .:location .:device .:parent)))
       (mygtd-db-query `[:insert :into task :values ([,@data])])
       (mygtd-db-query `[:insert :into migrate :values ([,.:id ,.:time])])
@@ -130,6 +123,7 @@
              (name (plist-get data :name))
              (category (plist-get data :category))
              (status (plist-get data :status))
+             (details (plist-get data :details))
              (period (plist-get data :period))
              (deadline (plist-get data :deadline))
              (location (plist-get data :location))
@@ -137,8 +131,9 @@
              (parent (plist-get data :parent)))
         (if (string= status "todo")
             (insert (propertize (format "- [ ] %s" name)
-                                'icon (mygtd-task-icon id time)))
-          (insert (format "- [X] %s" name))))
+                                'icon (mygtd-task-icon id time))
+                    "\n  " details)
+          (insert (format "- [X] %s" name) "\n  " details)))
     (insert "No daily tasks.")))
 
 ;;; prettify
@@ -276,10 +271,12 @@
   (interactive)
   (let ((date mygtd-daily-date)
         (name (completing-read "Input the task name: " nil))
-        (category (completing-read "Input the task category: " nil)))
+        (category (completing-read "Input the task category: " nil))
+        (details (completing-read "Input details of task: " nil)))
     (mygtd-task-add (list :id (org-id-uuid)
                           :name name
                           :category category
+                          :details details
                           :time date))))
 
 ;;;###autoload
