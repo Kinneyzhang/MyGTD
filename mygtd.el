@@ -77,13 +77,7 @@
                        .:deadline .:location .:device .:parent)))
       (mygtd-db-query `[:insert :into task :values ([,@data])])
       (mygtd-db-query `[:insert :into migrate :values ([,.:id ,.:time])])
-      (let ((plist (mygtd-query-wrapper 'task data)))
-        (if (mygtd-ewoc-buffer-data)
-            (ewoc-enter-last mygtd-daily-ewoc plist)
-          ;; no task
-          (let ((node (ewoc-nth mygtd-daily-ewoc 0)))
-            (ewoc-set-data node plist)
-            (ewoc-invalidate mygtd-daily-ewoc node)))))))
+      data)))
 
 (defun mygtd-task-multi-add (plist-list)
   "Add multiple tasks to database according to a PLIST-LIST."
@@ -111,29 +105,61 @@
     (define-key map "j" #'mygtd-daily-goto-date)
     (define-key map "a" #'mygtd-daily-task-add)
     (define-key map "D" #'mygtd-daily-task-delete)
+    (define-key map "t" #'mygtd-daily-details-toggle)
     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
+
+(defvar mygtd-task-details-flag nil
+  "Determine whether to show details of task.")
+
+(defun mygtd-task-icon (id time)
+  "Return task icon with task ID and TIME."
+  (let* ((timelst (mygtd-db-migrate-timelst id))
+         (len (length timelst))
+         (nth (seq-position timelst time)))
+    (if (= nth (1- len))
+        mygtd-task-icon-todo
+      (let* ((from-time time)
+             (to-time (seq-elt timelst (1+ nth))))
+        (if (= (length from-time) (length to-time))
+            (if (mygtd-time-less-p from-time to-time)
+                mygtd-task-icon-right1
+              mygtd-task-icon-left1)
+          (if (mygtd-time-wider-p from-time to-time)
+              mygtd-task-icon-right2
+            mygtd-task-icon-left2))))))
+
+(defun mygtd-task-status-text (status)
+  (pcase status
+    ("todo" "[ ]")
+    ("done" "[X]")))
 
 (defun mygtd-daily-pp (data)
   (if data
       (let* ((time (or (plist-get data :time)
                        mygtd-daily-date))
              (id (plist-get data :id))
-             (name (plist-get data :name))
+             (icon (mygtd-task-icon id time))
+             (name (propertize (plist-get data :name)
+                               'face 'mygtd-task-name-face))
              (category (plist-get data :category))
              (status (plist-get data :status))
-             (details (plist-get data :details))
+             (status-text (mygtd-task-status-text status))
+             (details (propertize (plist-get data :details)
+                                  'face 'mygtd-task-details-face))
              (period (plist-get data :period))
              (deadline (plist-get data :deadline))
              (location (plist-get data :location))
              (device (plist-get data :device))
-             (parent (plist-get data :parent)))
-        (if (string= status "todo")
-            (insert (propertize (format "- [ ] %s" name)
-                                'icon (mygtd-task-icon id time))
-                    "\n  " details)
-          (insert (format "- [X] %s" name) "\n  " details)))
+             (parent (plist-get data :parent))
+             (task-basic-text (propertize (format "- %s %s" status-text name)
+                                          'icon icon 'task-id id)))
+        (if mygtd-task-details-flag
+            ;; show full details of tasks.
+            (safe-insert task-basic-text "  " category "/" location "/" device "\n"
+                         (propertize details 'line-prefix "  " 'wrap-prefix "  "))
+          (safe-insert task-basic-text)))
     (insert "No daily tasks.")))
 
 ;;; prettify
@@ -228,6 +254,14 @@
    (format-time-string "%Y%m%d" (- (mygtd-date-to-second mygtd-daily-date)
                                    (* 24 60 60)))))
 
+(defun mygtd-daily-details-toggle ()
+  "Toggle for showing or hiding mygtd daily task details."
+  (interactive)
+  (if mygtd-task-details-flag
+      (setq mygtd-task-details-flag nil)
+    (setq mygtd-task-details-flag t))
+  (ewoc-refresh mygtd-daily-ewoc))
+
 ;;;###autoload
 (defun mygtd-daily-refresh ()
   "Force to refresh mygtd daily ewoc buffer."
@@ -272,12 +306,16 @@
   (let ((date mygtd-daily-date)
         (name (completing-read "Input the task name: " nil))
         (category (completing-read "Input the task category: " nil))
-        (details (completing-read "Input details of task: " nil)))
-    (mygtd-task-add (list :id (org-id-uuid)
-                          :name name
-                          :category category
-                          :details details
-                          :time date))))
+        (details (completing-read "Input details of task: " nil))
+        (data (mygtd-task-add (list :name name :category category
+                                    :details details :time date)))
+        (plist (mygtd-query-wrapper 'task data)))
+    (if (mygtd-ewoc-buffer-data)
+        (ewoc-enter-last mygtd-daily-ewoc plist)
+      ;; no task
+      (let ((node (ewoc-nth mygtd-daily-ewoc 0)))
+        (ewoc-set-data node plist)
+        (ewoc-invalidate mygtd-daily-ewoc node)))))
 
 ;;;###autoload
 (defun mygtd-daily-task-delete ()

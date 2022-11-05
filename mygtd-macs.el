@@ -30,6 +30,13 @@
 
 ;;; Code:
 
+(defun safe-insert (&rest args)
+  "Safely insert ARGS."
+  (dolist (arg args)
+    (if (null arg)
+        (insert "")
+      (insert arg))))
+
 (defun mygtd-ewoc-pos-node (&optional pos)
   (ewoc-locate mygtd-daily-ewoc pos))
 

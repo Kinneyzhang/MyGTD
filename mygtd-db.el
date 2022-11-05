@@ -129,24 +129,6 @@ Result example: (:id \"111\" :name \"test111\" :category \"work\" :status \"todo
   (mapcar #'car (mygtd-db-query
                  `[:select time :from migrate :where (= id ,id)])))
 
-(defun mygtd-task-icon (id time)
-  "Return task icon with task ID and TIME."
-  (let* ((timelst (mygtd-db-migrate-timelst id))
-         (len (length timelst))
-         (nth (seq-position timelst time)))
-    (if (= nth (1- len))
-        (progn
-          mygtd-task-icon-todo)
-      (let* ((from-time time)
-             (to-time (seq-elt timelst (1+ nth))))
-        (if (= (length from-time) (length to-time))
-            (if (mygtd-time-less-p from-time to-time)
-                mygtd-task-icon-right1
-              mygtd-task-icon-left1)
-          (if (mygtd-time-wider-p from-time to-time)
-              mygtd-task-icon-right2
-            mygtd-task-icon-left2))))))
-
 (defun mygtd-db-migrate-records (id)
   "Return the migration records according to task ID."
   (mygtd-query-wrapper

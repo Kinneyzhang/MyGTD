@@ -40,6 +40,26 @@
    (:name "mygtd构建一个展示任务列表的可用版本" :category "hack" :time "20221022")
    (:name "200031错单时序问题回收成功场景测试" :category "work" :time "20221022")))
 
+(mygtd-task-multi-add
+ '((:name "测试任务111" :category "test"
+          :time "20221105" :details "这是测试任务111的具体内容"
+          :period "morning" :deadline "20221104" :location "office" :device "PC")
+   (:name "测试任务222" :category "test"
+          :time "20221105" :details "这是测试任务222的具体内容
+1.这是第一条任务明细
+2.这是第二条任务明细
+3.这是第三条任务明细"
+          :period "morning" :deadline "20221105" :location "office" :device "PC")
+   (:name "测试任务333" :category "test"
+          :time "20221105" :details "这是测试任务333的具体内容"
+          :period "afternoon" :deadline "20221104" :location "home" :device "Mac")
+   (:name "测试任务444" :category "test"
+          :time "20221105" :details "这是测试任务444的具体内容，这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容...这是一条很长的具体内容..."
+          :period "afternoon" :deadline "20221105" :location "outside" :device "Kindle")
+   (:name "测试任务555" :category "test"
+          :time "20221105" :details "这是测试任务555的具体内容"
+          :period "evening" :deadline "20221104" :location "office" :device "iPhone")))G..
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (mygtd-db-query [:insert :into order :values (["20220926" "111,222,333,444"])])
