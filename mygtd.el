@@ -53,6 +53,8 @@
 
 (defvar mygtd-task-icon-right2 "»")
 
+(defvar-local mygtd-daily-ewoc-data nil)
+
 ;; ▶▷◀◁
 ;; ■▢▣□
 ;; ☐☒☑
@@ -211,11 +213,10 @@
   "Setup the buffer of `mygtd-daily-mode'."
   (let ((inhibit-read-only t))
     (kill-all-local-variables)
-    (setq major-mode 'mygtd-daily-mode
-          mode-name "Mygtd Daily")
     (erase-buffer)
     (buffer-disable-undo)
-    (use-local-map mygtd-daily-mode-map)))
+    (mygtd-daily-mode)
+    ))
 
 ;;;###autoload
 (defun mygtd-daily-show (&optional date)
@@ -235,6 +236,7 @@
         (dolist (data datas)
           (ewoc-enter-last ewoc data))
       (ewoc-enter-last ewoc nil))
+    (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data))
     (mygtd-mode 1)
     (read-only-mode 1)))
 
@@ -330,27 +332,52 @@
           (ewoc-enter-last mygtd-daily-ewoc nil)))
     (message "No task to delete!")))
 
+(defun mygtd-daily-edit-details ()
+  (interactive)
+  )
+
 ;;; switch to mygtd-edit-mode to add, delete or update task.
 ;; when use mygtd-edit-mode: switch to a editable org-mode buffer.
 
 (defun mygtd-edit-mode ()
   )
 
+(defvar mygtd-daily-old-data nil
+  "The old ewoc buffer data before editing.")
+
+(defvar mygtd-daily-new-data nil
+  "The new ewoc buffer data after editing.")
+
 (defun mygtd-change-to-edit-mode ()
   (interactive)
   (unless (derived-mode-p 'mygtd-daily-mode)
     (error "Not a mygtd daily buffer."))
-  )
+  (setq mygtd-daily-old-data mygtd-daily-ewoc-data)
+  (mygtd-edit-mode))
 
-(defun mygtd-toggle-read-only ()
+;; (defun mygtd-toggle-read-only ()
+;;   (interactive)
+;;   (if (derived-mode-p 'mygtd-daily-mode)
+;;       (mygtd-change-to-edit-mode)
+;;     (read-only-mode 'toggle)))
+
+(define-derived-mode mygtd-daily-mode org-mode "mygtd-daily"
   (interactive)
-  (if (derived-mode-p 'mygtd-daily-mode)
-      (mygtd-change-to-edit-mode)
-    (read-only-mode 'toggle)))
+  (setq major-mode 'mygtd-daily-mode)
+  (setq mode-name "mygtd-daily")
+  (use-local-map mygtd-daily-mode-map)
+  (run-hooks 'mygtd-daily-mode-hook))
 
-(define-derived-mode mygtd-edit-mode org-mode "Mygtd Edit"
-  "Define mygtd-edit-mode derived from org-mode."
-  )
+(define-derived-mode mygtd-edit-mode org-mode "mygtd-edit"
+  (interactive)
+  (setq major-mode 'mygtd-edit-mode)
+  (setq mode-name "mygtd-edit")
+  (read-only-mode -1)
+  (use-local-map mygtd-edit-mode-map)
+  (run-hooks 'mygtd-edit-mode-hook))
+
+(defun mygtd-buffer-p ()
+  (or (string= (buffer-name) mygtd-daily-buffer)))
 
 (define-minor-mode mygtd-mode
   "Minor mode for mygtd-daily."
@@ -359,14 +386,15 @@
   :require 'mygtd
   :global t
   (if mygtd-mode
-      (progn
+      (when (mygtd-buffer-p)
         (jit-lock-register #'mygtd-org-list-fontify)
         (mygtd-org-list-fontify (point-min) (point-max))
         (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
         (hl-line-mode 1))
-    (jit-lock-unregister #'mygtd-org-list-fontify)
-    (mygtd-org-list-unfontify (point-min) (point-max))
-    (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)))
+    (when (mygtd-buffer-p)
+      (jit-lock-unregister #'mygtd-org-list-fontify)
+      (mygtd-org-list-unfontify (point-min) (point-max))
+      (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))))
 
 (provide 'mygtd)
 
