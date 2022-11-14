@@ -96,19 +96,33 @@
 
 (defvar mygtd-daily-buffer "*Mygtd Daily*")
 
-(defvar mygtd-daily-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "p" #'mygtd-daily-show-previous)
-    (define-key map "n" #'mygtd-daily-show-next)
-    (define-key map "d" #'mygtd-daily-task-finish)
-    (define-key map "u" #'mygtd-daily-task-undo)
-    (define-key map "G" #'mygtd-daily-refresh)
-    (define-key map "." #'mygtd-daily-goto-today)
-    (define-key map "j" #'mygtd-daily-goto-date)
-    (define-key map "a" #'mygtd-daily-task-add)
-    (define-key map "D" #'mygtd-daily-task-delete)
-    (define-key map "t" #'mygtd-daily-details-toggle)
-    map))
+;; (defvar mygtd-daily-mode-map
+;;   (let ((map (make-sparse-keymap)))
+;;     (define-key map "p" #'mygtd-daily-show-previous)
+;;     (define-key map "n" #'mygtd-daily-show-next)
+;;     (define-key map "d" #'mygtd-daily-task-finish)
+;;     (define-key map "u" #'mygtd-daily-task-undo)
+;;     (define-key map "G" #'mygtd-daily-refresh)
+;;     (define-key map "." #'mygtd-daily-goto-today)
+;;     (define-key map "j" #'mygtd-daily-goto-date)
+;;     (define-key map "a" #'mygtd-daily-task-add)
+;;     (define-key map "D" #'mygtd-daily-task-delete)
+;;     (define-key map "t" #'mygtd-daily-details-toggle)
+;;     map))
+
+;; (defvar mygtd-mode-map
+;;   (let ((map (make-sparse-keymap)))
+;;     (define-key map "p" #'mygtd-daily-show-previous)
+;;     (define-key map "n" #'mygtd-daily-show-next)
+;;     (define-key map "d" #'mygtd-daily-task-finish)
+;;     (define-key map "u" #'mygtd-daily-task-undo)
+;;     (define-key map "G" #'mygtd-daily-refresh)
+;;     (define-key map "." #'mygtd-daily-goto-today)
+;;     (define-key map "j" #'mygtd-daily-goto-date)
+;;     (define-key map "a" #'mygtd-daily-task-add)
+;;     (define-key map "D" #'mygtd-daily-task-delete)
+;;     (define-key map "t" #'mygtd-daily-details-toggle)
+;;     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
 
@@ -215,7 +229,7 @@
     (kill-all-local-variables)
     (erase-buffer)
     (buffer-disable-undo)
-    (mygtd-daily-mode)
+    ;; (mygtd-daily-mode)
     ))
 
 ;;;###autoload
@@ -353,7 +367,8 @@
   (unless (derived-mode-p 'mygtd-daily-mode)
     (error "Not a mygtd daily buffer."))
   (setq mygtd-daily-old-data mygtd-daily-ewoc-data)
-  (mygtd-edit-mode))
+  ;; (mygtd-edit-mode)
+  )
 
 ;; (defun mygtd-toggle-read-only ()
 ;;   (interactive)
@@ -361,20 +376,20 @@
 ;;       (mygtd-change-to-edit-mode)
 ;;     (read-only-mode 'toggle)))
 
-(define-derived-mode mygtd-daily-mode org-mode "mygtd-daily"
-  (interactive)
-  (setq major-mode 'mygtd-daily-mode)
-  (setq mode-name "mygtd-daily")
-  (use-local-map mygtd-daily-mode-map)
-  (run-hooks 'mygtd-daily-mode-hook))
+;; (define-derived-mode mygtd-daily-mode org-mode "mygtd-daily"
+;;   (interactive)
+;;   (setq major-mode 'mygtd-daily-mode)
+;;   (setq mode-name "mygtd-daily")
+;;   (use-local-map mygtd-daily-mode-map)
+;;   (run-hooks 'mygtd-daily-mode-hook))
 
-(define-derived-mode mygtd-edit-mode org-mode "mygtd-edit"
-  (interactive)
-  (setq major-mode 'mygtd-edit-mode)
-  (setq mode-name "mygtd-edit")
-  (read-only-mode -1)
-  (use-local-map mygtd-edit-mode-map)
-  (run-hooks 'mygtd-edit-mode-hook))
+;; (define-derived-mode mygtd-edit-mode org-mode "mygtd-edit"
+;;   (interactive)
+;;   (setq major-mode 'mygtd-edit-mode)
+;;   (setq mode-name "mygtd-edit")
+;;   (read-only-mode -1)
+;;   (use-local-map mygtd-edit-mode-map)
+;;   (run-hooks 'mygtd-edit-mode-hook))
 
 (defun mygtd-buffer-p ()
   (or (string= (buffer-name) mygtd-daily-buffer)))
