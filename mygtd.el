@@ -30,6 +30,7 @@
 
 (require 'org-id)
 
+(require 'mygtd-face)
 (require 'mygtd-macs)
 (require 'mygtd-db)
 
@@ -96,33 +97,19 @@
 
 (defvar mygtd-daily-buffer "*Mygtd Daily*")
 
-;; (defvar mygtd-daily-mode-map
-;;   (let ((map (make-sparse-keymap)))
-;;     (define-key map "p" #'mygtd-daily-show-previous)
-;;     (define-key map "n" #'mygtd-daily-show-next)
-;;     (define-key map "d" #'mygtd-daily-task-finish)
-;;     (define-key map "u" #'mygtd-daily-task-undo)
-;;     (define-key map "G" #'mygtd-daily-refresh)
-;;     (define-key map "." #'mygtd-daily-goto-today)
-;;     (define-key map "j" #'mygtd-daily-goto-date)
-;;     (define-key map "a" #'mygtd-daily-task-add)
-;;     (define-key map "D" #'mygtd-daily-task-delete)
-;;     (define-key map "t" #'mygtd-daily-details-toggle)
-;;     map))
-
-;; (defvar mygtd-mode-map
-;;   (let ((map (make-sparse-keymap)))
-;;     (define-key map "p" #'mygtd-daily-show-previous)
-;;     (define-key map "n" #'mygtd-daily-show-next)
-;;     (define-key map "d" #'mygtd-daily-task-finish)
-;;     (define-key map "u" #'mygtd-daily-task-undo)
-;;     (define-key map "G" #'mygtd-daily-refresh)
-;;     (define-key map "." #'mygtd-daily-goto-today)
-;;     (define-key map "j" #'mygtd-daily-goto-date)
-;;     (define-key map "a" #'mygtd-daily-task-add)
-;;     (define-key map "D" #'mygtd-daily-task-delete)
-;;     (define-key map "t" #'mygtd-daily-details-toggle)
-;;     map))
+(defvar mygtd-daily-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" #'mygtd-daily-show-previous)
+    (define-key map "n" #'mygtd-daily-show-next)
+    (define-key map "d" #'mygtd-daily-task-finish)
+    (define-key map "u" #'mygtd-daily-task-undo)
+    (define-key map "G" #'mygtd-daily-refresh)
+    (define-key map "." #'mygtd-daily-goto-today)
+    (define-key map "j" #'mygtd-daily-goto-date)
+    (define-key map "a" #'mygtd-daily-task-add)
+    (define-key map "D" #'mygtd-daily-task-delete)
+    (define-key map "t" #'mygtd-daily-details-toggle)
+    map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
 
@@ -173,8 +160,11 @@
                                           'icon icon 'task-id id)))
         (if mygtd-task-details-flag
             ;; show full details of tasks.
-            (safe-insert task-basic-text "  " category "/" location "/" device "\n"
-                         (propertize details 'line-prefix "  " 'wrap-prefix "  "))
+            (safe-insert task-basic-text "  "
+                         ;; (string-join (list category location device) "/")
+                         "\n"
+                         (propertize details 'face 'mygtd-task-details-face
+                                     'line-prefix "  " 'wrap-prefix "  "))
           (safe-insert task-basic-text)))
     (insert "No daily tasks.")))
 
@@ -188,13 +178,11 @@
   "Highlight org checkbox with NOTATION."
   (pcase checkbox
     ("[ ]"
-     (let ((icon (get-text-property (point) 'icon)))
-       (add-text-properties (match-beginning 2) (1- (match-end 2))
-                            `(display ,icon))))
+     (add-text-properties (match-beginning 2) (1- (match-end 2))
+                          `(display ,mygtd-task-icon-todo)))
     ("[X]"
-     (add-text-properties
-      (match-beginning 2) (1- (match-end 2))
-      `(display ,mygtd-task-icon-done)))))
+     (add-text-properties (match-beginning 2) (1- (match-end 2))
+                          `(display ,mygtd-task-icon-done)))))
 
 (defun mygtd-org-list-fontify (beg end)
   "Highlight org list bullet between BEG and END."
@@ -229,8 +217,9 @@
     (kill-all-local-variables)
     (erase-buffer)
     (buffer-disable-undo)
-    ;; (mygtd-daily-mode)
-    ))
+    (setq major-mode 'mygtd-daily-mode)
+    (setq mode-name "mygtd-daily")
+    (use-local-map mygtd-daily-mode-map)))
 
 ;;;###autoload
 (defun mygtd-daily-show (&optional date)
@@ -241,7 +230,8 @@
   (let* ((date (or date (format-time-string "%Y%m%d")))
          (ewoc (ewoc-create
                 'mygtd-daily-pp
-                (concat (propertize (concat "Mygtd Daily\n\n") 'face '(:height 1.5))
+                (concat (propertize (concat "Mygtd Daily\n") 'face '(:height 1.5))
+                        "\n"
                         (propertize (concat (mygtd-date-shown date) "\n")
                                     'face '(:height 1.1))))))
     (setq mygtd-daily-date date)
@@ -251,7 +241,7 @@
           (ewoc-enter-last ewoc data))
       (ewoc-enter-last ewoc nil))
     (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data))
-    (mygtd-mode 1)
+    (mygtd-prettify-mode 1)
     (read-only-mode 1)))
 
 ;;;###autoload
@@ -319,19 +309,72 @@
 ;;;###autoload
 (defun mygtd-daily-task-add ()
   (interactive)
-  (let ((date mygtd-daily-date)
-        (name (completing-read "Input the task name: " nil))
-        (category (completing-read "Input the task category: " nil))
-        (details (completing-read "Input details of task: " nil))
-        (data (mygtd-task-add (list :name name :category category
-                                    :details details :time date)))
-        (plist (mygtd-query-wrapper 'task data)))
+  (let* ((date mygtd-daily-date)
+         (name (completing-read "Input the task name: " nil))
+         (category (completing-read "Input the task category: " nil))
+         (details (completing-read "Input details of task: " nil))
+         (data (mygtd-task-add (list :name name :category category
+                                     :details details :time date)))
+         (plist (mygtd-query-wrapper 'task data)))
     (if (mygtd-ewoc-buffer-data)
         (ewoc-enter-last mygtd-daily-ewoc plist)
       ;; no task
       (let ((node (ewoc-nth mygtd-daily-ewoc 0)))
         (ewoc-set-data node plist)
-        (ewoc-invalidate mygtd-daily-ewoc node)))))
+        (ewoc-invalidate mygtd-daily-ewoc node)))
+    (mygtd-daily-ewoc-data-update)))
+
+(defun mygtd-daily-ewoc-data-update ()
+  (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data)))
+
+;;; capture task
+
+(defvar mygtd-capture-mode (let ((map (make-sparse-keymap)))
+                             (define-key map "\C-c\C-d" 'mygtd-capture-finish)
+                             (define-key map "\C-c\C-k" 'mygtd-capture-cancel)
+                             map))
+
+(defun mygtd-capture-data-diff ()
+  )
+
+(defun mygtd-capture-finish ()
+  (interactive)
+  (let ((new-data ))
+    (mygtd-daily-ewoc-data-update)))
+
+(defun mygtd-capture-cancel ()
+  (interactive)
+  (kill-buffer mygtd-capture-buffer))
+
+(defvar mygtd-daily-old-data nil
+  "The old ewoc buffer data before editing.")
+
+(defvar mygtd-daily-new-data nil
+  "The new ewoc buffer data after editing.")
+
+(defvar mygtd-capture-buffer "*Mygtd Capture*")
+
+(defun mygtd-capture ()
+  "Add mygtd tasks in a capture buffer."
+  (interactive)
+  (let ((old-data mygtd-daily-ewoc-data))
+    (switch-to-buffer mygtd-capture-buffer)
+    (setq major-mode 'mygtd-capture-mode)
+    (setq mode-name "mygtd-capture")
+    (setq-local header-line-format
+                (substitute-command-keys "\\<mygtd-capture-mode-map>Capture Tasks: `\\[mygtd-capture-finish]' to finish, `\\[mygtd-capture-cancel]' to cancel"))
+    (use-local-map mygtd-capture-mode-map)
+    (dolist (data old-data)
+      (let ((name (plist-get data :name))
+            (status (plist-get data :status)))
+        (insert "- " (mygtd-task-status-text status) " " name "\n")))
+    (use-local-map org-mode-map)
+    (mygtd-prettify-mode 1)))
+
+(global-set-key "\C-cmd" #'mygtd-daily-show)
+
+;; □ • ■
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;###autoload
 (defun mygtd-daily-task-delete ()
@@ -350,66 +393,24 @@
   (interactive)
   )
 
-;;; switch to mygtd-edit-mode to add, delete or update task.
-;; when use mygtd-edit-mode: switch to a editable org-mode buffer.
-
-(defun mygtd-edit-mode ()
-  )
-
-(defvar mygtd-daily-old-data nil
-  "The old ewoc buffer data before editing.")
-
-(defvar mygtd-daily-new-data nil
-  "The new ewoc buffer data after editing.")
-
-(defun mygtd-change-to-edit-mode ()
-  (interactive)
-  (unless (derived-mode-p 'mygtd-daily-mode)
-    (error "Not a mygtd daily buffer."))
-  (setq mygtd-daily-old-data mygtd-daily-ewoc-data)
-  ;; (mygtd-edit-mode)
-  )
-
-;; (defun mygtd-toggle-read-only ()
-;;   (interactive)
-;;   (if (derived-mode-p 'mygtd-daily-mode)
-;;       (mygtd-change-to-edit-mode)
-;;     (read-only-mode 'toggle)))
-
-;; (define-derived-mode mygtd-daily-mode org-mode "mygtd-daily"
-;;   (interactive)
-;;   (setq major-mode 'mygtd-daily-mode)
-;;   (setq mode-name "mygtd-daily")
-;;   (use-local-map mygtd-daily-mode-map)
-;;   (run-hooks 'mygtd-daily-mode-hook))
-
-;; (define-derived-mode mygtd-edit-mode org-mode "mygtd-edit"
-;;   (interactive)
-;;   (setq major-mode 'mygtd-edit-mode)
-;;   (setq mode-name "mygtd-edit")
-;;   (read-only-mode -1)
-;;   (use-local-map mygtd-edit-mode-map)
-;;   (run-hooks 'mygtd-edit-mode-hook))
-
 (defun mygtd-buffer-p ()
-  (or (string= (buffer-name) mygtd-daily-buffer)))
+  (or (string= (buffer-name) mygtd-daily-buffer)
+      (string= (buffer-name) mygtd-capture-buffer)))
 
-(define-minor-mode mygtd-mode
+(define-minor-mode mygtd-prettify-mode
   "Minor mode for mygtd-daily."
-  :lighter " Mygtd"
-  :keymap (let ((map (make-sparse-keymap))) map)
-  :require 'mygtd
-  :global t
-  (if mygtd-mode
-      (when (mygtd-buffer-p)
-        (jit-lock-register #'mygtd-org-list-fontify)
-        (mygtd-org-list-fontify (point-min) (point-max))
-        (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
-        (hl-line-mode 1))
-    (when (mygtd-buffer-p)
+  :keymap nil
+  (when (mygtd-buffer-p)
+    (if mygtd-prettify-mode
+        (progn
+          (jit-lock-register #'mygtd-org-list-fontify)
+          (mygtd-org-list-fontify (point-min) (point-max))
+          (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
+          (hl-line-mode 1))
       (jit-lock-unregister #'mygtd-org-list-fontify)
       (mygtd-org-list-unfontify (point-min) (point-max))
-      (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))))
+      (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))
+    (jit-lock-refontify)))
 
 (provide 'mygtd)
 
