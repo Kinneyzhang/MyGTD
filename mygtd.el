@@ -42,7 +42,7 @@
 
 (defvar mygtd-task-org-done "[X]")
 
-(defvar mygtd-task-icon-todo "□") ;; ▢ ☐ □
+(defvar mygtd-task-icon-todo "□") ;; □ ■
 
 (defvar mygtd-task-icon-done "■") ;; √ ☑ ▣
 
@@ -54,7 +54,7 @@
 
 (defvar mygtd-task-icon-right2 "»")
 
-(defvar-local mygtd-daily-ewoc-data nil)
+(defvar mygtd-daily-ewoc-data nil)
 
 ;; ▶▷◀◁
 ;; ■▢▣□
@@ -90,7 +90,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Mygtd Daily
 
-(defvar mygtd-daily-ewoc nil)
+(defvar mygtd-daily-ewoc nil
+  "Ewoc of mygtd daily buffer.")
 
 (defvar mygtd-daily-date nil
   "Current date of mygtd daily buffer.")
@@ -138,12 +139,15 @@
     ("todo" "[ ]")
     ("done" "[X]")))
 
+(defun mygtd-task-status-icon (status)
+  (pcase status ("todo" "□") ("done" "■")))
+
 (defun mygtd-daily-pp (data)
   (if data
       (let* ((time (or (plist-get data :time)
                        mygtd-daily-date))
              (id (plist-get data :id))
-             (icon (mygtd-task-icon id time))
+             (icon (mygtd-task-status-icon (plist-get data :status)))
              (name (propertize (plist-get data :name)
                                'face 'mygtd-task-name-face))
              (category (plist-get data :category))
@@ -156,8 +160,8 @@
              (location (plist-get data :location))
              (device (plist-get data :device))
              (parent (plist-get data :parent))
-             (task-basic-text (propertize (format "- %s %s" status-text name)
-                                          'icon icon 'task-id id)))
+             ;; "• "
+             (task-basic-text (propertize name 'line-prefix (concat icon " ") 'id id)))
         (if mygtd-task-details-flag
             ;; show full details of tasks.
             (safe-insert task-basic-text "  "
@@ -167,6 +171,13 @@
                                      'line-prefix "  " 'wrap-prefix "  "))
           (safe-insert task-basic-text)))
     (insert "No daily tasks.")))
+
+;;; TODO: 每条task设置 id属性，在 edit mode 中编辑时，新的task要求不继承之前得id属性
+;;; properties 似乎有问题，尝试 overlay 能否解决这个问题
+;;; 考虑数据 增删改得情况下，id属性是否会有问题
+
+;;; 每一行一条task，新的task赋予新的task id，入task表后，更新 record 表
+;;; 切回daily mode 后重新生成ewoc数据
 
 ;;; prettify
 
@@ -235,13 +246,13 @@
                         (propertize (concat (mygtd-date-shown date) "\n")
                                     'face '(:height 1.1))))))
     (setq mygtd-daily-date date)
-    (set (make-local-variable 'mygtd-daily-ewoc) ewoc)
+    (setq mygtd-daily-ewoc ewoc)
     (if-let ((datas (mygtd-db-order-records date)))
         (dolist (data datas)
           (ewoc-enter-last ewoc data))
       (ewoc-enter-last ewoc nil))
     (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data))
-    (mygtd-prettify-mode 1)
+    ;; (mygtd-prettify-mode 1)
     (read-only-mode 1)))
 
 ;;;###autoload
@@ -327,55 +338,6 @@
 (defun mygtd-daily-ewoc-data-update ()
   (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data)))
 
-;;; capture task
-
-(defvar mygtd-capture-mode (let ((map (make-sparse-keymap)))
-                             (define-key map "\C-c\C-d" 'mygtd-capture-finish)
-                             (define-key map "\C-c\C-k" 'mygtd-capture-cancel)
-                             map))
-
-(defun mygtd-capture-data-diff ()
-  )
-
-(defun mygtd-capture-finish ()
-  (interactive)
-  (let ((new-data ))
-    (mygtd-daily-ewoc-data-update)))
-
-(defun mygtd-capture-cancel ()
-  (interactive)
-  (kill-buffer mygtd-capture-buffer))
-
-(defvar mygtd-daily-old-data nil
-  "The old ewoc buffer data before editing.")
-
-(defvar mygtd-daily-new-data nil
-  "The new ewoc buffer data after editing.")
-
-(defvar mygtd-capture-buffer "*Mygtd Capture*")
-
-(defun mygtd-capture ()
-  "Add mygtd tasks in a capture buffer."
-  (interactive)
-  (let ((old-data mygtd-daily-ewoc-data))
-    (switch-to-buffer mygtd-capture-buffer)
-    (setq major-mode 'mygtd-capture-mode)
-    (setq mode-name "mygtd-capture")
-    (setq-local header-line-format
-                (substitute-command-keys "\\<mygtd-capture-mode-map>Capture Tasks: `\\[mygtd-capture-finish]' to finish, `\\[mygtd-capture-cancel]' to cancel"))
-    (use-local-map mygtd-capture-mode-map)
-    (dolist (data old-data)
-      (let ((name (plist-get data :name))
-            (status (plist-get data :status)))
-        (insert "- " (mygtd-task-status-text status) " " name "\n")))
-    (use-local-map org-mode-map)
-    (mygtd-prettify-mode 1)))
-
-(global-set-key "\C-cmd" #'mygtd-daily-show)
-
-;; □ • ■
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;;;###autoload
 (defun mygtd-daily-task-delete ()
   "Delete a daily task."
@@ -389,28 +351,55 @@
           (ewoc-enter-last mygtd-daily-ewoc nil)))
     (message "No task to delete!")))
 
-(defun mygtd-daily-edit-details ()
+;;; Add task by changing to mygtd-edit-mode
+
+(defun mygtd-ewco-goto-first-node ()
+  (ewoc-goto-node mygtd-daily-ewoc (ewoc-nth mygtd-daily-ewoc 0)))
+
+(add-text-properties)
+
+(defun mygtd-change-to-edit-mode ()
+  (interactive)
+  (let ((old-data mygtd-daily-ewoc-data))
+    (mygtd-edit-mode)
+    (while )))
+
+(defun mygtd-finish-edit-mode ()
   (interactive)
   )
 
-(defun mygtd-buffer-p ()
-  (or (string= (buffer-name) mygtd-daily-buffer)
-      (string= (buffer-name) mygtd-capture-buffer)))
+(define-derived-mode mygtd-edit-mode fundamental-mode "Mygtd Edit"
+  (interactive)
+  (setq major-mode 'mygtd-edit-mode)
+  (setq mode-name "mygtd-edit")
+  (mygtd-edit-highlight-keywords)
+  (read-only-mode -1))
 
-(define-minor-mode mygtd-prettify-mode
-  "Minor mode for mygtd-daily."
-  :keymap nil
-  (when (mygtd-buffer-p)
-    (if mygtd-prettify-mode
-        (progn
-          (jit-lock-register #'mygtd-org-list-fontify)
-          (mygtd-org-list-fontify (point-min) (point-max))
-          (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
-          (hl-line-mode 1))
-      (jit-lock-unregister #'mygtd-org-list-fontify)
-      (mygtd-org-list-unfontify (point-min) (point-max))
-      (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))
-    (jit-lock-refontify)))
+(defun mygtd-edit-highlight-keywords ()
+  "Highlight keywords in mygtd-edit-mode buffer."
+  (font-lock-add-keywords
+   nil
+   '(("^[0-9]\\{4\\}" . 'font-lock-constant-face)))
+  (font-lock-mode 1))
+
+;; (defun mygtd-buffer-p ()
+;;   (or (string= (buffer-name) mygtd-daily-buffer)
+;;       (string= (buffer-name) mygtd-capture-buffer)))
+
+;; (define-minor-mode mygtd-prettify-mode
+;;   "Minor mode for mygtd-daily."
+;;   :keymap nil
+;;   (when (mygtd-buffer-p)
+;;     (if mygtd-prettify-mode
+;;         (progn
+;;           (jit-lock-register #'mygtd-org-list-fontify)
+;;           (mygtd-org-list-fontify (point-min) (point-max))
+;;           (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
+;;           (hl-line-mode 1))
+;;       (jit-lock-unregister #'mygtd-org-list-fontify)
+;;       (mygtd-org-list-unfontify (point-min) (point-max))
+;;       (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))
+;;     (jit-lock-refontify)))
 
 (provide 'mygtd)
 
