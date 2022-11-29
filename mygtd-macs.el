@@ -80,7 +80,7 @@
 
 (defvar mygtd-month-fmt "%Y-%m")
 
-(defvar mygtd-date-fmt "%Y-%m-%d")
+(defvar mygtd-date-fmt "%b %d, %Y")
 
 (defun mygtd-month-to-org-date (month)
   (format "%s-%s-%s"
@@ -118,7 +118,10 @@
                                                   (substring mygtd-month 4 6)))))
 
 (defun mygtd-date-shown (mygtd-date)
-  (format-time-string mygtd-date-fmt (mygtd-date-to-time mygtd-date)))
+  (let* ((time (mygtd-date-to-time mygtd-date))
+         (month (calendar-month-name
+                 (string-to-number (format-time-string "%m" time)) t)))
+    (concat month (format-time-string " %d, %Y" time))))
 
 (defun mygtd-time-to-str (time)
   "Convert the mygtd format of time to meaningful time string.

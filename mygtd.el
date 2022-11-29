@@ -110,6 +110,7 @@
     (define-key map "a" #'mygtd-daily-task-add)
     (define-key map "D" #'mygtd-daily-task-delete)
     (define-key map "t" #'mygtd-daily-details-toggle)
+    (define-key map "\C-x\C-q" #'mygtd-change-to-edit-mode)
     map))
 
 ;; (:id \"111\" :name \"test111\" :category \"work\" :status \"todo\" :period nil :deadline nil :location nil :device nil :parent nil)
@@ -161,15 +162,19 @@
              (device (plist-get data :device))
              (parent (plist-get data :parent))
              ;; "• "
-             (task-basic-text (propertize name 'line-prefix (concat icon " ") 'id id)))
+             (task-prefix (concat icon " "))
+             (task-name name))
         (if mygtd-task-details-flag
             ;; show full details of tasks.
-            (safe-insert task-basic-text "  "
-                         ;; (string-join (list category location device) "/")
-                         "\n"
+            (safe-insert (concat task-prefix task-name "  \n")
                          (propertize details 'face 'mygtd-task-details-face
                                      'line-prefix "  " 'wrap-prefix "  "))
-          (safe-insert task-basic-text)))
+          (let ((beg (point))
+                end ov)
+            (safe-insert (concat task-prefix task-name))
+            (setq end (point))
+            (setq ov (make-overlay beg end))
+            (overlay-put ov 'id id))))
     (insert "No daily tasks.")))
 
 ;;; TODO: 每条task设置 id属性，在 edit mode 中编辑时，新的task要求不继承之前得id属性
@@ -241,10 +246,8 @@
   (let* ((date (or date (format-time-string "%Y%m%d")))
          (ewoc (ewoc-create
                 'mygtd-daily-pp
-                (concat (propertize (concat "Mygtd Daily\n") 'face '(:height 1.5))
-                        "\n"
-                        (propertize (concat (mygtd-date-shown date) "\n")
-                                    'face '(:height 1.1))))))
+                (propertize (concat (mygtd-date-shown date) "\n")
+                            'face '(bold :height 2.2)))))
     (setq mygtd-daily-date date)
     (setq mygtd-daily-ewoc ewoc)
     (if-let ((datas (mygtd-db-order-records date)))
@@ -252,7 +255,7 @@
           (ewoc-enter-last ewoc data))
       (ewoc-enter-last ewoc nil))
     (setq mygtd-daily-ewoc-data (mygtd-ewoc-buffer-data))
-    ;; (mygtd-prettify-mode 1)
+    (mygtd-prettify-mode 1)
     (read-only-mode 1)))
 
 ;;;###autoload
@@ -356,22 +359,42 @@
 (defun mygtd-ewco-goto-first-node ()
   (ewoc-goto-node mygtd-daily-ewoc (ewoc-nth mygtd-daily-ewoc 0)))
 
-(add-text-properties)
-
 (defun mygtd-change-to-edit-mode ()
   (interactive)
   (let ((old-data mygtd-daily-ewoc-data))
     (mygtd-edit-mode)
-    (while )))
+    ))
 
-(defun mygtd-finish-edit-mode ()
+(defun mygtd-edit-finish ()
   (interactive)
-  )
+  (message "Finish edit mode"))
+
+(defun mygtd-edit-return ()
+  (interactive)
+  (newline)
+  (insert mygtd-task-icon-todo " "))
+
+(defun mygtd-edit-move-up ()
+  (interactive)
+  (let ((curr-ov (overlays-at (point)))
+        )))
+
+(defun mygtd-edit-move-down ()
+  (interactive))
+
+(defvar mygtd-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" #'mygtd-edit-finish)
+    (define-key map (kbd "M-<RET>") #'mygtd-edit-return)
+    (define-key map (kbd "M-n") #'mygtd-edit-move-up)
+    (define-key map (kbd "M-p") #'mygtd-edit-move-down)
+    map))
 
 (define-derived-mode mygtd-edit-mode fundamental-mode "Mygtd Edit"
   (interactive)
   (setq major-mode 'mygtd-edit-mode)
   (setq mode-name "mygtd-edit")
+  (use-local-map mygtd-edit-mode-map)
   (mygtd-edit-highlight-keywords)
   (read-only-mode -1))
 
@@ -386,20 +409,16 @@
 ;;   (or (string= (buffer-name) mygtd-daily-buffer)
 ;;       (string= (buffer-name) mygtd-capture-buffer)))
 
-;; (define-minor-mode mygtd-prettify-mode
-;;   "Minor mode for mygtd-daily."
-;;   :keymap nil
-;;   (when (mygtd-buffer-p)
-;;     (if mygtd-prettify-mode
-;;         (progn
-;;           (jit-lock-register #'mygtd-org-list-fontify)
-;;           (mygtd-org-list-fontify (point-min) (point-max))
-;;           (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
-;;           (hl-line-mode 1))
-;;       (jit-lock-unregister #'mygtd-org-list-fontify)
-;;       (mygtd-org-list-unfontify (point-min) (point-max))
-;;       (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))
-;;     (jit-lock-refontify)))
+(define-minor-mode mygtd-prettify-mode
+  "Minor mode for mygtd-daily."
+  :keymap nil
+  (when (mygtd-buffer-p)
+    (if mygtd-prettify-mode
+        (progn
+          (add-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin)
+          (hl-line-mode 1))
+      (remove-hook 'window-configuration-change-hook #'mygtd-preserve-window-margin))
+    (jit-lock-refontify)))
 
 (provide 'mygtd)
 
