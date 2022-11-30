@@ -173,7 +173,7 @@
                 end ov)
             (safe-insert (concat task-prefix task-name))
             (setq end (point))
-            (setq ov (make-overlay beg end))
+            (setq ov (make-overlay beg end nil nil t))
             (overlay-put ov 'id id))))
     (insert "No daily tasks.")))
 
@@ -247,7 +247,7 @@
          (ewoc (ewoc-create
                 'mygtd-daily-pp
                 (propertize (concat (mygtd-date-shown date) "\n")
-                            'face '(bold :height 2.2)))))
+                            'face 'mygtd-daily-title-face))))
     (setq mygtd-daily-date date)
     (setq mygtd-daily-ewoc ewoc)
     (if-let ((datas (mygtd-db-order-records date)))
@@ -398,12 +398,20 @@
   (mygtd-edit-highlight-keywords)
   (read-only-mode -1))
 
+(defface mygtd-daily-title-face
+  '((t :inherit bold :height 2.2))
+  "Face for mygtd date title.")
+
+(defun mygtd-ewoc-get-header ()
+  (car (ewoc-get-hf mygtd-daily-ewoc)))
+
 (defun mygtd-edit-highlight-keywords ()
   "Highlight keywords in mygtd-edit-mode buffer."
-  (font-lock-add-keywords
-   nil
-   '(("^[0-9]\\{4\\}" . 'font-lock-constant-face)))
-  (font-lock-mode 1))
+  (let ((title (mygtd-ewoc-get-header)))
+    (font-lock-add-keywords
+     nil
+     `((,(concat "^" (regexp-quote title)) . 'mygtd-daily-title-face)))
+    (font-lock-mode 1)))
 
 ;; (defun mygtd-buffer-p ()
 ;;   (or (string= (buffer-name) mygtd-daily-buffer)
